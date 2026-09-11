@@ -10,3 +10,11 @@ dist/
 
 # Logs
 *.log
+
+# Firebase service account keys — must never be committed under any name
+*serviceAccount*.json
+*service-account*.json
+*firebase-adminsdk*.json
+secrets/
+
+CLAUDE.md
