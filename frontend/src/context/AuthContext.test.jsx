@@ -87,4 +87,21 @@ describe('AuthContext', () => {
         })
     })
 
+    it("unsubscribes from onAuthStateChanged on unmount", () => {
+        const unsubscribeMock = vi.fn();
+        onAuthStateChanged.mockImplementation((auth, callback) => {
+            callback(null);
+            return unsubscribeMock;
+        });
+
+        const { unmount } = render(
+            <AuthProvider>
+                <TestConsumer/>
+            </AuthProvider>
+        );
+        unmount();
+
+        expect(unsubscribeMock).toHaveBeenCalledTimes(1);
+    })
+
 });
