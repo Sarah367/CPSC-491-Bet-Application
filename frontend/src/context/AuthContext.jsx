@@ -1,8 +1,7 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import {auth} from "../services/firebase";
-
-const AuthContext = createContext(undefined);
+import { AuthContext } from "./authContextObject";
 
 export function AuthProvider({children}) {
     const [currentUser, setCurrentUser] = useState(null);
@@ -29,12 +28,4 @@ export function AuthProvider({children}) {
             {children}
         </AuthContext.Provider>
     );
-}
-// shortcut so the components don't have to call useContext(authContext)
-export function useAuth() {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error("useAuth musted be used within an AuthProvider");
-    }
-    return context;
 }

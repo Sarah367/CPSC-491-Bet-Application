@@ -1,6 +1,7 @@
 import {render, screen, waitFor} from '@testing-library/react';
 import {vi, describe,it,expect,beforeEach} from 'vitest';
-import {AuthProvider,useAuth} from './AuthContext';
+import {AuthProvider} from './AuthContext';
+import {useAuth} from './useAuth';
 
 // replacing real firebase/auth module with fake one
 vi.mock("firebase/auth", async(importOriginal) => {
