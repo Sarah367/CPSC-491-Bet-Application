@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { AuthContext } from "./authContext";
+import { AuthContext } from "./authContextObject";
 
 // shortcut so the components don't have to call useContext(AuthContext)
 export function useAuth() {
