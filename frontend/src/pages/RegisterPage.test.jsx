@@ -84,4 +84,21 @@ describe("RegisterPage", () => {
         expect(mockNavigate).not.toHaveBeenCalled();
     });
 
+    it("shows an error for a malformed email address, without calling registerUser", async () => {
+        const user = userEvent.setup();
+        renderPage();
+
+        await user.type(screen.getByLabelText("Email"), "notanemail");
+        await user.type(screen.getByLabelText("Password"), "password123");
+        await user.type(screen.getByLabelText("Confirm Password"), "password123");
+        await user.click(screen.getByRole("button", {name: /register/i }));
+
+        expect(
+            screen.getByText("Please enter a valid email address.")
+        ).toBeInTheDocument();
+
+        expect(registerUser).not.toHaveBeenCalled();
+        expect(mockNavigate).not.toHaveBeenCalled();
+    })
+
 });
