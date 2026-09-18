@@ -17,8 +17,6 @@ import {
     NotAuthenticatedError,
 } from "./apiClient";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 // Stands in for a Firebase User: only getIdToken() matters to the client.
 function signIn(token = "fake-id-token") {
     const getIdToken = vi.fn().mockResolvedValue(token);
@@ -46,11 +44,13 @@ function mockResponse(status, body) {
 
 describe("apiClient", () => {
     beforeEach(() => {
+        vi.stubEnv("VITE_API_BASE_URL", "http://localhost:5001/api");
         signOut();
         globalThis.fetch = vi.fn();
     });
 
     afterEach(() => {
+        vi.unstubAllEnvs();
         vi.restoreAllMocks();
     });
 
@@ -82,17 +82,28 @@ describe("apiClient", () => {
         await apiGet("/protected");
 
         const [url] = globalThis.fetch.mock.calls[0];
-        expect(url).toBe(`${API_BASE_URL}/protected`);
+        expect(url).toBe("http://localhost:5001/api/protected");
     });
 
-    it("joins base URL and path without duplicating or dropping slashes", async () => {
+    it("adds a missing leading slash to the path", async () => {
         signIn();
         globalThis.fetch.mockResolvedValue(mockResponse(200, {}));
 
         await apiGet("protected");
 
         const [url] = globalThis.fetch.mock.calls[0];
-        expect(url).toBe(`${API_BASE_URL}/protected`);
+        expect(url).toBe("http://localhost:5001/api/protected");
+    });
+
+    it("does not duplicate slashes when the base URL ends in one", async () => {
+        vi.stubEnv("VITE_API_BASE_URL", "http://localhost:5001/api/");
+        signIn();
+        globalThis.fetch.mockResolvedValue(mockResponse(200, {}));
+
+        await apiGet("/protected");
+
+        const [url] = globalThis.fetch.mock.calls[0];
+        expect(url).toBe("http://localhost:5001/api/protected");
     });
 
     it("returns the parsed JSON body on success", async () => {

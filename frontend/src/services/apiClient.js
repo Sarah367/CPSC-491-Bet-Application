@@ -1,8 +1,5 @@
 import { auth } from "./firebase";
 
-// Base URL of the backend API, e.g. http://localhost:5001/api (see .env.example).
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 // Thrown when a request is attempted with no signed-in user, so callers can tell
 // "you are not signed in" apart from "the server rejected you".
 export class NotAuthenticatedError extends Error {
@@ -34,8 +31,15 @@ async function getAuthHeader() {
     return `Bearer ${token}`;
 }
 
+// Base URL of the backend API, e.g. http://localhost:5001/api (see .env.example).
+// Read per request rather than once at module load, so the value is never baked
+// in at import time and tests can stub it.
+function getBaseUrl() {
+    return import.meta.env.VITE_API_BASE_URL ?? "";
+}
+
 function buildUrl(path) {
-    const base = (API_BASE_URL ?? "").replace(/\/+$/, "");
+    const base = getBaseUrl().replace(/\/+$/, "");
     const suffix = path.startsWith("/") ? path : `/${path}`;
     return `${base}${suffix}`;
 }
