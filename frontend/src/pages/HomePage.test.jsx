@@ -1,7 +1,4 @@
-import {render} from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
 import {vi, describe,it, beforeEach} from "vitest";
-import HomePage from "./HomePage";
 import {useAuth} from "../context/useAuth";
 
 vi.mock("../services/authService", () => ({
