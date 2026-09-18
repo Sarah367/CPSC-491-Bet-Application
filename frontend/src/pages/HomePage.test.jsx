@@ -1,6 +1,6 @@
 import {render} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import {vi, describe,it, expect, beforeEach} from "vitest";
+import {vi, describe,it, beforeEach} from "vitest";
 import HomePage from "./HomePage";
 import {useAuth} from "../context/useAuth";
 
@@ -20,14 +20,6 @@ vi.mock("react-router-dom", async (importOriginal) => {
         useNavigate: () => mockNavigate,
     };
 });
-
-function renderPage() {
-    render(
-        <MemoryRouter>
-            <HomePage/>
-        </MemoryRouter>
-    );
-}
 
 describe("HomePage logout", () => {
     beforeEach(() => {

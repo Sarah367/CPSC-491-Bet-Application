@@ -13,7 +13,8 @@ function HomePage() {
         try {
             await logoutUser();
             navigate("/login");
-        } catch(error) {
+        } catch(err) {
+            console.error("Logout failed: ", err);
             setError("Unable to log out. Please try again.");
         }
     }
