@@ -1,6 +1,8 @@
 import {useState} from "react";
 import {useNavigate, Link} from "react-router-dom";
 import {registerUser} from "../services/authService";
+import { getFriendlyErrorMessage } from "../utils/authErrorMessages";
+
 function RegisterPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -13,8 +15,18 @@ function RegisterPage() {
         event.preventDefault();
         setError("");
 
-        if (!email || !password) {
-            setError("Please enter both an email and password.");
+        if (!email) {
+            setError("Email is required.");
+            return;
+        }
+
+        if (!password) {
+            setError("Password is required.");
+            return;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            setError("Please enter a valid email address.");
             return;
         }
 
@@ -44,7 +56,7 @@ function RegisterPage() {
     return (
         <div>
             <h1>Register</h1>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
                 <div>
                     <label htmlFor="email">Email</label>
                     <input
@@ -87,18 +99,5 @@ function RegisterPage() {
     );
 }
 
-function getFriendlyErrorMessage(code) {
-    switch (code) {
-        // handles Firebase's most common error codes, else tell the user that something went wrong and to try submitting again.
-        case "auth/email-already-in-use":
-            return "An account with this email already exists.";
-        case "auth/invalid-email":
-            return "Please enter a valid email address.";
-        case "auth/weak-password":
-            return "Password should be at least 6 characters.";
-        default:
-            return "Something went wrong! Please try again.";
-    }
-}
 
 export default RegisterPage;
