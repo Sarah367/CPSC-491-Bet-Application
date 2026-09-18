@@ -1,9 +1,7 @@
-import {render, screen, waitFor} from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import {render} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import {vi, describe,it, expect, beforeEach} from "vitest";
 import HomePage from "./HomePage";
-import {logoutUser} from "../services/authService";
 import {useAuth} from "../context/useAuth";
 
 vi.mock("../services/authService", () => ({
