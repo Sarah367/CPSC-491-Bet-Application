@@ -1,8 +1,6 @@
 import {auth} from "./firebase";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
-console.log("Connected to Firebase Project ID: ", auth.app.options.projectId);
-
 export {auth}
 
 // handles user registration
@@ -21,7 +19,6 @@ export async function loginUser(email, password) {
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        console.log("User logged in successfully: ", user);
         return user;
     } catch (error) {
         console.error("Login failed: ", error.code, error.message);
@@ -32,7 +29,6 @@ export async function loginUser(email, password) {
 export async function logoutUser() {
     try {
         await signOut(auth);
-        console.log("User signed out successfully.");
     } catch (error) {
         console.error("Error signing out: ", error);
         throw error;
