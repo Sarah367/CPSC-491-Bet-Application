@@ -22,6 +22,15 @@ vi.mock("react-router-dom", async (importOriginal) => {
     };
 });
 
+// HomePage now renders a <Link>, which needs a Router context to render at all.
+function renderHome() {
+    return render(
+        <MemoryRouter>
+            <HomePage />
+        </MemoryRouter>
+    );
+}
+
 describe("HomePage logout", () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -35,7 +44,7 @@ describe("HomePage logout", () => {
   it("logs out successfully and navigates to /login", async () => {
     logoutUser.mockResolvedValueOnce();
 
-    render(<HomePage />);
+    renderHome();
 
     fireEvent.click(screen.getByRole("button", { name: "Log Out" }));
 
@@ -48,7 +57,7 @@ describe("HomePage logout", () => {
   it("shows a loading indicator while auth state is loading", () => {
     useAuth.mockReturnValue({ currentUser: null, loading: true, isAuthenticated: false });
 
-    render(<HomePage />);
+    renderHome();
 
     expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
@@ -69,7 +78,7 @@ describe("HomePage logout", () => {
   });
 
   it("renders the logged-in user's email", () => {
-    render(<HomePage />);
+    renderHome();
 
     expect(screen.getByText(/test@example.com/)).toBeInTheDocument();
   });
@@ -77,7 +86,7 @@ describe("HomePage logout", () => {
   it("shows an error message when logout fails", async () => {
     logoutUser.mockRejectedValueOnce(new Error("network error"));
 
-    render(<HomePage />);
+    renderHome();
 
     fireEvent.click(screen.getByRole("button", { name: "Log Out" }));
 
@@ -89,7 +98,7 @@ describe("HomePage logout", () => {
 
   it("clears a previous error on a subsequent logout attempt", async () => {
     logoutUser.mockRejectedValueOnce(new Error("first failure"));
-    render(<HomePage />);
+    renderHome();
     fireEvent.click(screen.getByRole("button", { name: "Log Out" }));
     await screen.findByRole("alert");
 

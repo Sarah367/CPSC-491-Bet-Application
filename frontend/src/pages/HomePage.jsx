@@ -1,5 +1,5 @@
 import {useAuth} from "../context/useAuth";
-import {useNavigate, Navigate} from "react-router-dom";
+import {useNavigate, Navigate, Link} from "react-router-dom";
 import {logoutUser} from "../services/authService";
 import {useState} from "react";
 
@@ -32,6 +32,7 @@ function HomePage() {
             <h1>Bet Home</h1>
             <p>Logged in as {currentUser.email}</p>
             {error && <p role="alert">{error}</p>}
+            <Link to="/bets">Browse Public Bets</Link>
             <button onClick={handleLogout}>Log Out</button>
         </div>
     );
