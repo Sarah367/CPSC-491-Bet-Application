@@ -25,6 +25,10 @@ bets/{betId}
 | `visibility`        | enum                |   Yes    | `"public"` \| `"private"`              |
 | `resolutionMethod`  | enum                |   Yes    | `"external"` \| `"personal"`           |
 | `status`            | enum                |   Yes    | `"draft"` \| `"active"` \| `"locked"` \| `"resolved"` \| `"archived"` — new bets start at `"draft"` |
+| `stakeType`         | enum                |   Yes    | `"monetary"` \| `"nonMonetary"`        |
+| `stakeAmountCents`  | number               | If `stakeType` is `"monetary"` | Stake amount, in cents (avoids floating-point issues) |
+| `currency`          | string               | If `stakeType` is `"monetary"` | e.g. `"USD"` |
+| `stakeDescription`  | string               | If `stakeType` is `"nonMonetary"` | e.g. `"Loser buys dinner"` |
 
 ## Example
 
@@ -37,7 +41,27 @@ bets/{betId}
     "deadline": "<Firestore Timestamp>",
     "visibility": "public",
     "resolutionMethod": "external",
-    "status": "draft"
+    "status": "draft",
+    "stakeType": "monetary",
+    "stakeAmountCents": 1000,
+    "currency": "USD"
+}
+```
+
+A non-monetary stake example:
+
+```json
+{
+    "title": "Will it rain on Saturday?",
+    "description": "Loser buys dinner.",
+    "creatorUid": "firebase-user-uid",
+    "createdAt": "<Firestore Timestamp>",
+    "deadline": "<Firestore Timestamp>",
+    "visibility": "private",
+    "resolutionMethod": "personal",
+    "status": "draft",
+    "stakeType": "nonMonetary",
+    "stakeDescription": "Loser buys dinner"
 }
 ```
 
@@ -48,5 +72,5 @@ bets/{betId}
 ## Deferred (not in this schema yet)
 - Invitations/participants (`invitedUsers`, `participants`)
 - Mediator/dispute fields (`mediatorUid`, `disputeStatus`)
-- Payment fields (`amount`, `stripePaymentIntentId`, etc.)
+- Actual payment processing (`stripePaymentIntentId`, payout/winnings) — the Bet document now *represents* the stake (`stakeType`, `stakeAmountCents`/`stakeDescription`), but no money is actually collected, held, or transferred yet. That requires Stripe integration, which is separate future work.
 - `updatedAt` - may be added later with SCRUM-36 (Bet Editing)
