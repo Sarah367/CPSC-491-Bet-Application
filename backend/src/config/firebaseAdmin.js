@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { initializeApp, getApps, getApp, cert } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
+const { getFirestore } = require("firebase-admin/firestore");
 
 // Resolve the service account path relative to the backend/ root so that both
 // "./secrets/key.json" and an absolute path work the same way.
@@ -61,5 +62,6 @@ const app = getApps().length === 0
     : getApp();
 
 const auth = getAuth(app);
+const db = getFirestore(app);
 
-module.exports = { app, auth };
+module.exports = { app, auth, db };
