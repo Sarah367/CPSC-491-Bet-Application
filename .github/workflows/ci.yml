@@ -7,6 +7,31 @@ on:
     branches: [main]
 
 jobs:
+  build-id:
+    name: Build Identifier
+    runs-on: ubuntu-latest
+    outputs:
+      build-id: ${{ steps.compute.outputs.build-id }}
+    steps:
+      - name: Compute build identifier
+        id: compute
+        run: |
+          BUILD_ID="build-${{ github.run_number }}-$(echo '${{ github.sha }}' | cut -c1-7)"
+          echo "build-id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          echo "Build identifier: $BUILD_ID"
+          {
+            echo "### Build identifier"
+            echo
+            echo "\`$BUILD_ID\`"
+            echo
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Run number | ${{ github.run_number }} |"
+            echo "| Commit | ${{ github.sha }} |"
+            echo "| Ref | ${{ github.ref_name }} |"
+            echo "| Event | ${{ github.event_name }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   backend:
     name: Backend (Jest)
     runs-on: ubuntu-latest
