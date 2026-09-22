@@ -3,9 +3,11 @@ const {
     BET_VISIBILITY,
     BET_RESOLUTION_METHOD,
     BET_STATUS,
+    BET_STAKE_TYPE,
     isValidVisibility,
     isValidResolutionMethod,
     isValidStatus,
+    isValidStakeType,
 } = require("./betModel");
 
 describe("betModel", () => {
@@ -50,6 +52,18 @@ describe("betModel", () => {
 
         it("defines draft as a valid initial Bet status", () => {
             expect(BET_STATUS.DRAFT).toBe("draft");
+        });
+    });
+
+    describe("isValidStakeType", () => {
+        it("accepts monetary and nonMonetary", () => {
+            expect(isValidStakeType(BET_STAKE_TYPE.MONETARY)).toBe(true);
+            expect(isValidStakeType(BET_STAKE_TYPE.NON_MONETARY)).toBe(true);
+        });
+
+        it("rejects an invalid stake type", () => {
+            expect(isValidStakeType("crypto")).toBe(false);
+            expect(isValidStakeType(undefined)).toBe(false);
         });
     });
 });
