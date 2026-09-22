@@ -1,6 +1,8 @@
 const {
     isValidVisibility,
     isValidResolutionMethod,
+    isValidStakeType,
+    BET_STAKE_TYPE,
 } = require("../models/betModel");
 const betService = require("../services/betService");
 
@@ -10,6 +12,10 @@ function sendBadRequest(res, message) {
 
 function isBlankString(value) {
     return typeof value !== "string" || value.trim().length === 0;
+}
+
+function isPositiveInteger(value) {
+    return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
 // Validates the POST /api/bets request body. Only fields the client is allowed to control are checked here:
@@ -50,6 +56,34 @@ function validateCreateBetBody(body) {
         return { valid: false, message: "deadline must be in the future."};
     }
 
+    if (!isValidStakeType(body.stakeType)) {
+        return {
+            valid: false,
+            message: "stakeType must be \"monetary\" or \"nonMonetary\".",
+        };
+    }
+
+    if (body.stakeType === BET_STAKE_TYPE.MONETARY) {
+        if (!isPositiveInteger(body.stakeAmountCents)) {
+            return {
+                valid: false,
+                message: "stakeAmountCents must be a positive integer for monetary stakes."
+            };
+        }
+
+        if (isBlankString(body.currency)) {
+            return {
+                valid: false,
+                message: "currency is required for monetary stakes."
+            };
+        }
+    } else if (isBlankString(body.stakeDescription)) {
+        return {
+            valid: false,
+            message: "stakeDescription is required for non-monetary stakes."
+        };
+    }
+
     return { valid: true, deadline: parsedDeadline };
 }
 
@@ -63,6 +97,15 @@ async function createBet(req, res) {
     }
 
     try {
+        const stakeFields = req.body.stakeType === BET_STAKE_TYPE.MONETARY
+            ? {
+                stakeAmountCents: req.body.stakeAmountCents,
+                currency: req.body.currency.trim(),
+            }
+            : {
+                stakeDescription: req.body.stakeDescription.trim(),
+            };
+
         const bet = await betService.createBet({
             title: req.body.title.trim(),
             description: req.body.description.trim(),
@@ -71,6 +114,8 @@ async function createBet(req, res) {
             deadline: validation.deadline,
             visibility: req.body.visibility,
             resolutionMethod: req.body.resolutionMethod,
+            stakeType: req.body.stakeType,
+            ...stakeFields,
         });
 
         return res.status(201).json({

@@ -1,6 +1,6 @@
 const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 const {db} = require("../config/firebaseAdmin");
-const { BET_COLLECTION, BET_STATUS } = require("../models/betModel");
+const { BET_COLLECTION, BET_STATUS, BET_STAKE_TYPE } = require("../models/betModel");
 
 async function createBet({
     title,
@@ -9,6 +9,10 @@ async function createBet({
     deadline,
     visibility,
     resolutionMethod,
+    stakeType,
+    stakeAmountCents,
+    currency,
+    stakeDescription,
 }) {
     const betData = {
         title,
@@ -19,6 +23,10 @@ async function createBet({
         visibility,
         resolutionMethod,
         status: BET_STATUS.DRAFT,
+        stakeType,
+        ...(stakeType === BET_STAKE_TYPE.MONETARY
+            ? { stakeAmountCents, currency }
+            : { stakeDescription }),
     };
 
     const docRef = await db.collection(BET_COLLECTION).add(betData);

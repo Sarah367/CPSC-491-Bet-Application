@@ -33,6 +33,9 @@ function validBody(overrides = {}) {
         deadline: futureDateString(),
         visibility: "public",
         resolutionMethod: "external",
+        stakeType: "monetary",
+        stakeAmountCents: 1000,
+        currency: "USD",
         ...overrides,
     };
 }
@@ -80,6 +83,64 @@ describe("validateCreateBetBody", () => {
         expect(result.message).toMatch(/future/i);
     });
 
+    it("rejects a missing stakeType", () => {
+        const result = validateCreateBetBody(validBody({ stakeType: undefined }));
+        expect(result.valid).toBe(false);
+        expect(result.message).toMatch(/stakeType/i);
+    });
+ 
+    it("rejects an invalid stakeType", () => {
+        const result = validateCreateBetBody(validBody({ stakeType: "crypto" }));
+        expect(result.valid).toBe(false);
+        expect(result.message).toMatch(/stakeType/i);
+    });
+ 
+    it("rejects a monetary stake missing stakeAmountCents", () => {
+        const result = validateCreateBetBody(
+            validBody({ stakeType: "monetary", stakeAmountCents: undefined, currency: "USD" })
+        );
+        expect(result.valid).toBe(false);
+        expect(result.message).toMatch(/stakeAmountCents/i);
+    });
+ 
+    it("rejects a monetary stake with a non-positive stakeAmountCents", () => {
+        const result = validateCreateBetBody(
+            validBody({ stakeType: "monetary", stakeAmountCents: 0, currency: "USD" })
+        );
+        expect(result.valid).toBe(false);
+        expect(result.message).toMatch(/stakeAmountCents/i);
+    });
+ 
+    it("rejects a monetary stake missing currency", () => {
+        const result = validateCreateBetBody(
+            validBody({ stakeType: "monetary", stakeAmountCents: 1000, currency: "" })
+        );
+        expect(result.valid).toBe(false);
+        expect(result.message).toMatch(/currency/i);
+    });
+ 
+    it("accepts a valid monetary stake", () => {
+        const result = validateCreateBetBody(
+            validBody({ stakeType: "monetary", stakeAmountCents: 1000, currency: "USD" })
+        );
+        expect(result.valid).toBe(true);
+    });
+ 
+    it("rejects a nonMonetary stake missing stakeDescription", () => {
+        const result = validateCreateBetBody(
+            validBody({ stakeType: "nonMonetary", stakeDescription: "   " })
+        );
+        expect(result.valid).toBe(false);
+        expect(result.message).toMatch(/stakeDescription/i);
+    });
+ 
+    it("accepts a valid nonMonetary stake", () => {
+        const result = validateCreateBetBody(
+            validBody({ stakeType: "nonMonetary", stakeDescription: "Loser buys dinner" })
+        );
+        expect(result.valid).toBe(true);
+    });
+
 });
 
 describe("createBet controller", () => {
@@ -108,6 +169,13 @@ describe("createBet controller", () => {
         expect(res.statusCode).toBe(201);
         expect(res.body.bet).toEqual(fakeBet);
         expect(betService.createBet).toHaveBeenCalledTimes(1);
+        expect(betService.createBet).toHaveBeenCalledWith(
+            expect.objectContaining({
+                stakeType: "monetary",
+                stakeAmountCents: 1000,
+                currency: "USD",
+            })
+        );
     });
 
     it("derives creatorUid from req.user, never from the request body", async () => {
