@@ -2,6 +2,7 @@ import {useState} from "react";
 import {useNavigate, Link} from "react-router-dom";
 import {registerUser} from "../services/authService";
 import { getFriendlyErrorMessage } from "../utils/authErrorMessages";
+import "./AuthPages.css";
 
 function RegisterPage() {
     const [email, setEmail] = useState("");
@@ -54,47 +55,56 @@ function RegisterPage() {
     }
 
     return (
-        <div>
-            <h1>Register</h1>
-            <form onSubmit={handleSubmit} noValidate>
-                <div>
-                    <label htmlFor="email">Email</label>
-                    <input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e)=>setEmail(e.target.value)}
-                        required
-                    />
+        <div className="auth-page">
+            <div className="auth-brand">
+                <span className="wordmark">Bet</span>
+                <h1>Join friends in casual, low-stakes wagers.</h1>
+                <p>Create an account to start creating and joining bets.</p>
+            </div>
+            <div className="auth-form-panel">
+                <div className="auth-card">
+                    <h2>Register</h2>
+                    <form onSubmit={handleSubmit} noValidate>
+                        {error && <p role="alert" className="auth-alert">{error}</p>}
+                        <div className="auth-field">
+                            <label htmlFor="email">Email</label>
+                            <input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e)=>setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="auth-field">
+                            <label htmlFor="password">Password</label>
+                            <input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="auth-field">
+                            <label htmlFor="confirmPassword">Confirm Password</label>
+                            <input
+                                id="confirmPassword"
+                                type="password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <button type="submit" className="auth-submit" disabled={loading}>
+                            {loading ? "Creating account..." : "Register"}
+                        </button>
+                    </form>
+                    <p className="auth-footer">
+                        Already have an account? <Link to="/login">Log in</Link>
+                    </p>
                 </div>
-                <div>
-                    <label htmlFor="password">Password</label>
-                    <input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                    />
-                </div>
-                <div>
-                    <label htmlFor="confirmPassword">Confirm Password</label>
-                    <input
-                        id="confirmPassword"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                    />
-                </div>
-                {error && <p role="alert">{error}</p>}
-                <button type="submit" disabled={loading}>
-                    {loading ? "Creating account..." : "Register"}
-                </button>
-            </form>
-            <p>
-                Already have an account? <Link to="/login">Log in</Link>
-            </p>
+            </div>
         </div>
     );
 }
