@@ -2,6 +2,7 @@ import {useAuth} from "../context/useAuth";
 import {useNavigate, Navigate} from "react-router-dom";
 import {logoutUser} from "../services/authService";
 import {useState} from "react";
+import {Link} from "react-router-dom";
 
 function HomePage() {
     const {currentUser, loading, isAuthenticated} = useAuth();
@@ -33,6 +34,7 @@ function HomePage() {
             <p>Logged in as {currentUser.email}</p>
             {error && <p role="alert">{error}</p>}
             <button onClick={handleLogout}>Log Out</button>
+            <p><Link to="/profile">View Profile</Link></p>
         </div>
     );
 }
