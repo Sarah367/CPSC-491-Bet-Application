@@ -66,6 +66,30 @@ button {
   outline-offset: 2px;
 }
 
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--text);
+}
+
+.wordmark::before {
+  content: "";
+  display: inline-block;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.alert-banner {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

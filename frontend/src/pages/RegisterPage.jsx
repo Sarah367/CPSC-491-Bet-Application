@@ -65,7 +65,7 @@ function RegisterPage() {
                 <div className="auth-card">
                     <h2>Register</h2>
                     <form onSubmit={handleSubmit} noValidate>
-                        {error && <p role="alert" className="auth-alert">{error}</p>}
+                        {error && <p role="alert" className="alert-banner auth-alert">{error}</p>}
                         <div className="auth-field">
                             <label htmlFor="email">Email</label>
                             <input

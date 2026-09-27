@@ -37,7 +37,7 @@ function HomePage() {
                     <button className="home-logout" onClick={handleLogout}>Log Out</button>
                 </div>
             </header>
-            {error && <p role="alert" className="home-alert">{error}</p>}
+            {error && <p role="alert" className="alert-banner home-alert">{error}</p>}
             <main className="home-main">
                 <h1>Bet Home</h1>
                 <p>Your bets will show up here soon.</p>
