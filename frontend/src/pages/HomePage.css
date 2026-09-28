@@ -32,6 +32,18 @@
     color: var(--text-muted);
 }
 
+.home-profile-link {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.home-profile-link:hover {
+    color: var(--accent);
+}
+
 .home-logout {
     background: transparent;
     color: var(--text);
