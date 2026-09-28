@@ -47,8 +47,19 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
-      - run: npm ci
-      - run: npm test
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests (Jest)
+        run: npm test
+
+      # Fail the job on known high/critical vulnerabilities. Lower severities are still printed but do not fail
+      # CI. Runs last so a newly published advisory never hides test results. 
+      # !cancelled() lets it run and report even if an earlier step failed.
+
+      - name: Audit dependencies (high/critical)
+        if: ${{ !cancelled() }}
+        run: npm audit --audit-level=high
 
   frontend:
     name: Frontend (Lint, Vitest, Build)
@@ -65,9 +76,14 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - run: npm ci
-      - run: npm run lint
-      - run: npm test
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint 
+
+      - name: Run tests (Vitest)
+        run: npm test
         env:
           # Dummy values: tests mock firebase/auth, but firebase.js still
           # calls getAuth() at import time and needs non-empty config to
@@ -79,4 +95,10 @@ jobs:
           VITE_FIREBASE_STORAGE_BUCKET: test-project.appspot.com
           VITE_FIREBASE_MESSAGING_SENDER_ID: "000000000000"
           VITE_FIREBASE_APP_ID: "1:000000000000:web:0000000000000000000000"
-      - run: npm run build
+      - name: Build (Vite)
+        run: npm run build
+
+      # Security gate (SCRUM-48): see backend job for details
+      - name: Audit dependencies (high/critical)
+        if: ${{ !cancelled() }}
+        run: npm audit --audit-level-high

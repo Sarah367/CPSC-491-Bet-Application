@@ -4,14 +4,28 @@
 
 ## What it checks
 
-Two independent jobs run in parallel:
+Three independent jobs run in parallel:
 
-| Job | Steps | Runs from |
-|---|---|---|
-| **Backend** | install deps → `npm test` (Jest) | `backend/` |
-| **Frontend** | install deps → `npm run lint` (ESLint) → `npm test` (Vitest) → `npm run build` (Vite) | `frontend/` |
+| Job | Steps | Node | Runs from |
+|---|---|---|---|
+| **Build Identifier** | generates a unique ID for the run: `build-<run number>-<short commit SHA>` (e.g. `build-42-a1b2c3d`), shown in the run's summary | — | repo root |
+| **Backend** | install deps → `npm test` (Jest) → `npm audit --audit-level=high` | 20 | `backend/` |
+| **Frontend** | install deps → `npm run lint` (ESLint) → `npm test` (Vitest) → `npm run build` (Vite) → `npm audit --audit-level=high` | 22 | `frontend/` |
 
-Both use Node 20. Either job failing marks the check red on the PR.
+Any job failing marks the check red on the PR.
+
+## Dependency audit (security gate)
+
+Both the backend and frontend jobs end with `npm audit --audit-level=high`, which checks every installed package (including dev tools like Vite, ESLint, Vitest, and Jest) against npm's database of known vulnerabilities.
+
+- **High or critical** vulnerability found → the job **fails**.
+- **Moderate, low, or info** → still printed in the log for visibility, but the job **passes**.
+
+**Why `high`:** high and critical findings are treated as merge-blocking security issues. Lower severities stay visible for review without blocking work, since many come from transitive dependencies we can't fix directly. For example, when this gate was added (September 2026), the backend reported 6 moderate findings through `firebase-admin`'s dependencies and 0 high/critical; the frontend reported 0.
+
+**Why it runs last:** each job only takes about a minute, so auditing first would save very little time. Running it last means a newly published advisory never hides lint/test/build results, so reviewers can tell a code failure apart from a dependency-advisory failure. The step also has `if: ${{ !cancelled() }}`, so it still runs (and reports) when an earlier step fails.
+
+**Heads up:** the audit checks the *current* advisory database, so a commit that passed yesterday can fail today if a new vulnerability is published, even though no code changed. That's expected, not a CI bug.
 
 ## Where to see results
 
@@ -41,6 +55,12 @@ If `npm test` or `npm run build` fails locally with a Firebase error (`auth/inva
 - **Lint errors** — read the rule name in the error (e.g. `react-refresh/only-export-components`, `no-unused-vars`); ESLint's message tells you exactly what and where.
 - **Test failures** — reproduce with `npm test` locally; the Vitest/Jest output points at the failing assertion.
 - **Build failure** — usually a real error the dev server was silently tolerating; run `npm run build` locally to see the same output CI sees.
+- **Audit failure** — a dependency has a known high/critical vulnerability. Run `npm audit` locally to see the package, severity, and the dependency path that pulls it in. Then:
+  1. If it's a direct dependency, upgrade it (`npm audit` usually names the fixed version).
+  2. If it's transitive, upgrade the direct package that brings it in first. Only use an npm `overrides` entry if no fixed parent version exists, and leave a comment explaining why so it can be removed later.
+  3. Run the tests/lint/build again and commit the updated `package-lock.json` through a normal PR.
+
+  Don't run `npm audit fix` inside CI or add `|| true` to the audit step. CI should detect problems, not silently change dependencies or hide failures. If the step fails because the npm registry is unreachable (a network error rather than a vulnerability report), just re-run the job.
 
 ## Changing the workflow
 
