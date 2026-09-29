@@ -101,4 +101,4 @@ jobs:
       # Security gate (SCRUM-48): see backend job for details
       - name: Audit dependencies (high/critical)
         if: ${{ !cancelled() }}
-        run: npm audit --audit-level-high
+        run: npm audit --audit-level=high
