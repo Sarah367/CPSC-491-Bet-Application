@@ -1,11 +1,17 @@
 import {vi, describe, it, beforeEach, expect} from "vitest";
 import {render, screen} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import {MemoryRouter,  Routes, Route} from "react-router-dom";
 import {useAuth} from "../context/useAuth";
+import {updateDisplayName} from "../services/authService";
 import ProfilePage from "../pages/ProfilePage";
 
 vi.mock("../context/useAuth", () => ({
     useAuth: vi.fn(),
+}));
+
+vi.mock("../services/authService", () => ({
+    updateDisplayName: vi.fn(),
 }));
 
 function renderProfilePage() {
@@ -31,6 +37,30 @@ describe("ProfilePage", () => {
 
         renderProfilePage();
         expect(screen.getByText("Loading...")).toBeInTheDocument();
+    });
+
+    it("shows the display name after auth finishes loading", () => {
+        useAuth.mockReturnValue({
+            currentUser: null,
+            loading: true,
+            isAuthenticated: false,
+            emailVerified: null,
+        });
+        const {rerender} = renderProfilePage();
+
+        useAuth.mockReturnValue({
+            currentUser: {displayName: "Loaded User", metadata: {}},
+            loading: false,
+            isAuthenticated: true,
+            emailVerified: false,
+        });
+        rerender(
+            <MemoryRouter>
+                <ProfilePage />
+            </MemoryRouter>
+        );
+
+        expect(screen.getByText("Loaded User")).toBeInTheDocument();
     });
 
     it("redirects to /login when the user is not authenticated", () => {
@@ -103,5 +133,66 @@ describe("ProfilePage", () => {
 
         expect(screen.getByText(/Not set/)).toBeInTheDocument();
         expect(screen.getAllByText(/Not available/).length).toBeGreaterThan(0);
+    });
+
+    it("lets the user edit and save their display name", async () => {
+        const user = userEvent.setup();
+        useAuth.mockReturnValue({
+            currentUser: {displayName: "Test User", metadata: {}},
+            loading: false,
+            isAuthenticated: true,
+            emailVerified: false,
+        });
+        updateDisplayName.mockResolvedValue();
+
+        renderProfilePage();
+        await user.click(screen.getByRole("button", {name: "Edit"}));
+        await user.clear(screen.getByLabelText("Display name"));
+        await user.type(screen.getByLabelText("Display name"), "New Name");
+        await user.click(screen.getByRole("button", {name: "Save"}));
+
+        expect(updateDisplayName).toHaveBeenCalledWith("New Name");
+        expect(await screen.findByText("New Name")).toBeInTheDocument();
+    });
+
+    it("does not save a blank display name", async () => {
+        const user = userEvent.setup();
+        useAuth.mockReturnValue({
+            currentUser: {displayName: "Test User", metadata: {}},
+            loading: false,
+            isAuthenticated: true,
+            emailVerified: false,
+        });
+
+        renderProfilePage();
+        await user.click(screen.getByRole("button", {name: "Edit"}));
+        await user.clear(screen.getByLabelText("Display name"));
+        await user.type(screen.getByLabelText("Display name"), "   ");
+        await user.click(screen.getByRole("button", {name: "Save"}));
+
+        expect(screen.getByRole("alert")).toHaveTextContent("Display name cannot be empty.");
+        expect(updateDisplayName).not.toHaveBeenCalled();
+    });
+
+    it("shows an error when saving the display name fails", async () => {
+        const user = userEvent.setup();
+        useAuth.mockReturnValue({
+            currentUser: {displayName: "Test User", metadata: {}},
+            loading: false,
+            isAuthenticated: true,
+            emailVerified: false,
+        });
+        updateDisplayName.mockRejectedValue(new Error("Firebase unavailable"));
+
+        renderProfilePage();
+        await user.click(screen.getByRole("button", {name: "Edit"}));
+        await user.clear(screen.getByLabelText("Display name"));
+        await user.type(screen.getByLabelText("Display name"), "New Name");
+        await user.click(screen.getByRole("button", {name: "Save"}));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+            "Unable to update display name. Please try again."
+        );
+        expect(screen.getByText("Test User")).toBeInTheDocument();
     });
 });
