@@ -35,6 +35,7 @@ function HomePage() {
             {error && <p role="alert">{error}</p>}
             <button onClick={handleLogout}>Log Out</button>
             <p><Link to="/profile">View Profile</Link></p>
+            <p><Link to="/my-bets">My Bets</Link></p>
         </div>
     );
 }
