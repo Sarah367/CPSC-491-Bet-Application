@@ -1,8 +1,7 @@
 import {useAuth} from "../context/useAuth";
-import {useNavigate, Navigate} from "react-router-dom";
+import {useNavigate, Navigate, Link} from "react-router-dom";
 import {logoutUser} from "../services/authService";
 import {useState} from "react";
-import {Link} from "react-router-dom";
 import "./HomePage.css";
 
 function HomePage() {
@@ -35,6 +34,7 @@ function HomePage() {
                 <span className="wordmark">Bet</span>
                 <div className="home-account">
                     <span className="home-email">Logged in as {currentUser.email}</span>
+                    <Link to="/bets" className="home-profile-link">Browse Public Bets</Link>
                     <Link to="/profile" className="home-profile-link">View Profile</Link>
                     <button className="home-logout" onClick={handleLogout}>Log Out</button>
                 </div>
