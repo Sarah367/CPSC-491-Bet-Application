@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "dev": "node --watch src/server.js",
     "test": "jest"
   },
   "keywords": [],
@@ -14,13 +14,12 @@
   "type": "commonjs",
   "dependencies": {
     "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.4",
     "express": "^5.2.1",
     "firebase-admin": "^14.3.0"
   },
   "devDependencies": {
-    "jest": "^30.5.1",
-    "nodemon": "^3.1.14"
+    "jest": "^30.5.1"
   },
     "engines": {
     "node": ">=22"
