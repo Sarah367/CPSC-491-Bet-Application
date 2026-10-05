@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {useAuth} from "../context/useAuth";
-import {Navigate} from "react-router-dom";
+import {Link, Navigate} from "react-router-dom";
 import {updateDisplayName} from "../services/authService";
 import "./ProfilePage.css";
 
@@ -122,7 +122,14 @@ function ProfilePage() {
                         </div>
                         <div className="profile-row">
                             <dt>Email Verified</dt>
-                            <dd>{emailVerified ? "Yes" : "No"}</dd>
+                            <dd className="profile-verified-value">
+                                <span>{emailVerified ? "Yes" : "No"}</span>
+                                {!emailVerified && (
+                                    <Link to="/verify-email" className="profile-button profile-button-secondary">
+                                        Verify Email
+                                    </Link>
+                                )}
+                            </dd>
                         </div>
                         <div className="profile-row">
                             <dt>Account Created</dt>

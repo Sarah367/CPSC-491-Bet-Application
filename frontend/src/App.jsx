@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import CreateBetPage from './pages/CreateBetPage';
 import './App.css'
+import VerifyEmailPage from './pages/VerifyEmailPage';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/home" element={<HomePage/>}/>
         <Route path="/profile" element={<ProfilePage/>}/>
         <Route path="/bets/create" element={<CreateBetPage/>}/>
+        <Route path="/verify-email" element={<VerifyEmailPage/>}/>
       </Routes>
     </BrowserRouter>
   );
