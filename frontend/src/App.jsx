@@ -4,6 +4,7 @@ import RegisterPage from './pages/RegisterPage';
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import MyBetsPage from './pages/MyBetsPage';
+import CreateBetPage from './pages/CreateBetPage';
 import './App.css'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Route path="/home" element={<HomePage/>}/>
         <Route path="/profile" element={<ProfilePage/>}/>
         <Route path="/my-bets" element={<MyBetsPage/>}/>
+        <Route path="/bets/create" element={<CreateBetPage/>}/>
       </Routes>
     </BrowserRouter>
   );

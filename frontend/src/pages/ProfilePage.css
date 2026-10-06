@@ -1,0 +1,155 @@
+.profile-page {
+    min-height: 100svh;
+    background: var(--bg);
+}
+
+.profile-main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.profile-main h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 24px;
+}
+
+.profile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 20px;
+}
+
+.profile-details {
+    margin: 0;
+}
+
+/* One label/value pair per row, separated by a thin line. */
+.profile-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.profile-row:last-child {
+    border-bottom: none;
+}
+
+.profile-row dt {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.profile-row dd {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text);
+    overflow-wrap: anywhere; /* long emails wrap instead of overflowing on phones */
+}
+
+/* Display name value with the Edit button next to it. */
+.profile-name-value {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.profile-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.profile-edit-form label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.profile-edit-form input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 12px;
+    font: inherit;
+    font-size: 15px;
+    color: var(--text);
+}
+
+.profile-edit-form input:focus {
+    border-color: var(--accent);
+}
+
+.profile-edit-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.profile-button {
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.profile-button:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.profile-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.profile-button-secondary {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.profile-button-secondary:hover:not(:disabled) {
+    opacity: 1;
+    border-color: var(--accent);
+}
+
+/* Colors and padding come from the shared .alert-banner in index.css. */
+.profile-alert {
+    margin: 14px 0 0;
+}
+
+@media (min-width: 600px) {
+    .profile-card {
+        padding: 8px 24px;
+    }
+
+    /* On wider screens, show labels and values side by side. */
+    .profile-row {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .profile-row dt {
+        flex: 0 0 160px;
+    }
+
+    .profile-row dd {
+        flex: 1;
+    }
+}

@@ -3,6 +3,7 @@ import {useNavigate, Navigate} from "react-router-dom";
 import {logoutUser} from "../services/authService";
 import {useState} from "react";
 import {Link} from "react-router-dom";
+import "./HomePage.css";
 
 function HomePage() {
     const {currentUser, loading, isAuthenticated} = useAuth();
@@ -29,13 +30,21 @@ function HomePage() {
     }
 
     return (
-        <div>
-            <h1>Bet Home</h1>
-            <p>Logged in as {currentUser.email}</p>
-            {error && <p role="alert">{error}</p>}
-            <button onClick={handleLogout}>Log Out</button>
-            <p><Link to="/profile">View Profile</Link></p>
-            <p><Link to="/my-bets">My Bets</Link></p>
+        <div className="home-page">
+            <header className="home-header">
+                <span className="wordmark">Bet</span>
+                <div className="home-account">
+                    <span className="home-email">Logged in as {currentUser.email}</span>
+                    <Link to="/my-bets" className="home-profile-link">My Bets</Link>
+                    <Link to="/profile" className="home-profile-link">View Profile</Link>
+                    <button className="home-logout" onClick={handleLogout}>Log Out</button>
+                </div>
+            </header>
+            {error && <p role="alert" className="alert-banner home-alert">{error}</p>}
+            <main className="home-main">
+                <h1>Bet Home</h1>
+                <p>Your bets will show up here soon.</p>
+            </main>
         </div>
     );
 }

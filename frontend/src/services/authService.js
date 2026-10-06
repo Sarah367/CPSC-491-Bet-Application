@@ -1,5 +1,5 @@
 import {auth} from "./firebase";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
 
 export {auth}
 
@@ -33,4 +33,14 @@ export async function logoutUser() {
         console.error("Error signing out: ", error);
         throw error;
     }
+}
+
+export async function updateDisplayName(displayName) {
+    const user = auth.currentUser;
+    if (!user) {
+        throw new Error("A signed-in user is required to update the display name.");
+    }
+
+    await updateProfile(user, { displayName });
+    return user;
 }
