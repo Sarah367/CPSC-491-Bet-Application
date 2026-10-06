@@ -35,6 +35,7 @@ function HomePage() {
                 <span className="wordmark">Bet</span>
                 <div className="home-account">
                     <span className="home-email">Logged in as {currentUser.email}</span>
+                    <Link to="/my-bets" className="home-profile-link">My Bets</Link>
                     <Link to="/profile" className="home-profile-link">View Profile</Link>
                     <button className="home-logout" onClick={handleLogout}>Log Out</button>
                 </div>
