@@ -65,6 +65,7 @@ describe("CreateBetPage access", () => {
             currentUser: { uid: "abc123", email: "test@example.com" },
             loading: false,
             isAuthenticated: true,
+            emailVerified: true,
         });
     });
 
@@ -84,6 +85,22 @@ describe("CreateBetPage access", () => {
         renderAtCreateBet();
         expect(screen.getByRole("heading", { level: 1, name: "Create a Bet" })).toBeInTheDocument();
     });
+
+    it("blocks the form for an authenticated user whose email is not verified", () => {
+        useAuth.mockReturnValue({
+            currentUser: { uid: "abc123", email: "test@example.com" },
+            loading: false,
+            isAuthenticated: true,
+            emailVerified: false,
+        });
+        renderAtCreateBet();
+
+        expect(screen.getByRole("heading", { level: 1, name: "Verify your email first" })).toBeInTheDocument();
+        expect(screen.getByText("You need to verify your email before you can create a bet.")).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Verify Email" })).toHaveAttribute("href", "/verify-email");
+        expect(screen.queryByRole("button", { name: "Create Bet" })).not.toBeInTheDocument();
+        expect(screen.queryByLabelText("Title")).not.toBeInTheDocument();
+    });
 });
 
 describe("CreateBetPage form", () => {
@@ -93,6 +110,7 @@ describe("CreateBetPage form", () => {
             currentUser: { uid: "abc123", email: "test@example.com" },
             loading: false,
             isAuthenticated: true,
+            emailVerified: true,
         });
     });
 
@@ -226,6 +244,24 @@ describe("CreateBetPage form", () => {
 
         expect(await screen.findByRole("alert")).toHaveTextContent(
             "Couldn't create bet: deadline must be in the future."
+        );
+    });
+
+    it("tells the user to verify their email when the API returns 403 email_not_verified", async () => {
+        apiPost.mockRejectedValueOnce(
+            new ApiError(403, {
+                error: "email_not_verified",
+                message: "Please verify your email before creating or joining bets.",
+            })
+        );
+        renderAtCreateBet();
+        fillBetDetails();
+        fireEvent.click(screen.getByRole("radio", { name: "Non-monetary" }));
+        fireEvent.change(screen.getByLabelText("What's being wagered?"), { target: { value: "Loser buys dinner" } });
+        submit();
+
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+            "Please verify your email before creating a bet."
         );
     });
 

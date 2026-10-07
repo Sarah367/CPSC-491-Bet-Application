@@ -57,6 +57,9 @@ function getSubmitErrorMessage(error) {
     if (error instanceof NotAuthenticatedError || (error instanceof ApiError && error.status === 401)) {
         return "Your session has expired. Please log in again.";
     }
+    if (error instanceof ApiError && error.status === 403 && error.body?.error === "email_not_verified") {
+        return "Please verify your email before creating a bet.";
+    }
     if (error instanceof ApiError && error.status === 400 && error.body?.message) {
         return `Couldn't create bet: ${error.body.message}`;
     }
@@ -64,7 +67,7 @@ function getSubmitErrorMessage(error) {
 }
 
 function CreateBetPage() {
-    const { loading, isAuthenticated } = useAuth();
+    const { loading, isAuthenticated, emailVerified } = useAuth();
     const [formData, setFormData] = useState(INITIAL_FORM_DATA);
     const [errors, setErrors] = useState({});
     const [submitError, setSubmitError] = useState("");
@@ -77,6 +80,25 @@ function CreateBetPage() {
 
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
+    }
+
+    if (emailVerified === false) {
+        return (
+            <div className="create-bet-page">
+                <main className="create-bet-main">
+                    <section className="create-bet-success">
+                        <h1>Verify your email first</h1>
+                        <p>You need to verify your email before you can create a bet.</p>
+                        <div className="create-bet-success-actions">
+                            <Link to="/verify-email" className="create-bet-submit create-bet-link-button">
+                                Verify Email
+                            </Link>
+                            <Link to="/home" className="create-bet-secondary">Back to Home</Link>
+                        </div>
+                    </section>
+                </main>
+            </div>
+        );
     }
 
     function handleChange(event) {
