@@ -30,12 +30,17 @@ function validBody(overrides = {}) {
     return {
         title: "Will the Dodgers win on Friday?",
         description: "Friendly wager on Friday's game.",
+        outcomeA: "Dodgers win",
+        outcomeB: "Dodgers lose",
         deadline: futureDateString(),
+        outcomeDeadline: futureDateString(8),
         visibility: "public",
         resolutionMethod: "external",
         stakeType: "monetary",
         stakeAmountCents: 1000,
         currency: "USD",
+        creatorSide: "A",
+        termsAcknowledged: true,
         ...overrides,
     };
 }
@@ -45,6 +50,7 @@ describe("validateCreateBetBody", () => {
         const result = validateCreateBetBody(validBody());
         expect(result.valid).toBe(true);
         expect(result.deadline).toBeInstanceOf(Date);
+        expect(result.outcomeDeadline).toBeInstanceOf(Date);
     });
 
     it("rejects a missing title", () => {
@@ -140,6 +146,94 @@ describe("validateCreateBetBody", () => {
         );
         expect(result.valid).toBe(true);
     });
+        describe("outcomes", () => {
+        it.each([
+            ["missing", undefined],
+            ["blank", ""],
+            ["whitespace-only", "   "],
+            ["non-string", 42],
+        ])("rejects a %s outcomeA", (_label, value) => {
+            const result = validateCreateBetBody(validBody({ outcomeA: value }));
+            expect(result.valid).toBe(false);
+            expect(result.message).toMatch(/outcomeA/);
+        });
+
+        it.each([
+            ["missing", undefined],
+            ["blank", ""],
+            ["whitespace-only", "   "],
+        ])("rejects a %s outcomeB", (_label, value) => {
+            const result = validateCreateBetBody(validBody({ outcomeB: value }));
+            expect(result.valid).toBe(false);
+            expect(result.message).toMatch(/outcomeB/);
+        });
+
+        it.each([
+            ["identical", "Yes", "Yes"],
+            ["differing only by case", "Yes", "yes"],
+            ["differing only by surrounding whitespace", "Yes", "  Yes  "],
+        ])("rejects outcomes that are %s", (_label, outcomeA, outcomeB) => {
+            const result = validateCreateBetBody(validBody({ outcomeA, outcomeB }));
+            expect(result.valid).toBe(false);
+            expect(result.message).toMatch(/must be different/);
+        });
+    });
+
+    describe("outcomeDeadline", () => {
+        it("rejects a missing outcomeDeadline", () => {
+            const result = validateCreateBetBody(validBody({ outcomeDeadline: undefined }));
+            expect(result.valid).toBe(false);
+            expect(result.message).toMatch(/outcomeDeadline is required/);
+        });
+
+        it("rejects a malformed outcomeDeadline", () => {
+            const result = validateCreateBetBody(validBody({ outcomeDeadline: "not-a-date" }));
+            expect(result.valid).toBe(false);
+            expect(result.message).toMatch(/outcomeDeadline must be a valid date/);
+        });
+
+        it("rejects an outcomeDeadline before the deadline", () => {
+            const result = validateCreateBetBody(
+                validBody({ deadline: futureDateString(7), outcomeDeadline: futureDateString(3) })
+            );
+            expect(result.valid).toBe(false);
+            expect(result.message).toMatch(/after deadline/);
+        });
+
+        it("rejects an outcomeDeadline equal to the deadline", () => {
+            const sameTime = futureDateString(7);
+            const result = validateCreateBetBody(
+                validBody({ deadline: sameTime, outcomeDeadline: sameTime })
+            );
+            expect(result.valid).toBe(false);
+            expect(result.message).toMatch(/after deadline/);
+        });
+    });
+
+    describe("creatorSide", () => {
+        it.each([undefined, "C", "a", "Dodgers win"])("rejects creatorSide %p", (creatorSide) => {
+            const result = validateCreateBetBody(validBody({ creatorSide }));
+            expect(result.valid).toBe(false);
+            expect(result.message).toMatch(/creatorSide/);
+        });
+
+        it.each(["A", "B"])("accepts creatorSide %s", (creatorSide) => {
+            expect(validateCreateBetBody(validBody({ creatorSide })).valid).toBe(true);
+        });
+    });
+
+    describe("termsAcknowledged", () => {
+        it.each([
+            ["missing", undefined],
+            ["false", false],
+            ["the string \"true\"", "true"],
+            ["the number 1", 1],
+        ])("rejects termsAcknowledged when %s", (_label, termsAcknowledged) => {
+            const result = validateCreateBetBody(validBody({ termsAcknowledged }));
+            expect(result.valid).toBe(false);
+            expect(result.message).toMatch(/termsAcknowledged/);
+        });
+    });
 
 });
 
@@ -174,8 +268,81 @@ describe("createBet controller", () => {
                 stakeType: "monetary",
                 stakeAmountCents: 1000,
                 currency: "USD",
+                outcomeA: "Dodgers win",
+                outcomeB: "Dodgers lose",
+                creatorSide: "A",
+                outcomeDeadline: expect.any(Date),
             })
         );
+    });
+
+    it("trims outcome labels before passing them to the service", async () => {
+        betService.createBet.mockResolvedValue({ id: "x" });
+
+        const req = {
+            body: validBody({ outcomeA: "  Dodgers win  ", outcomeB: "\tDodgers lose\n" }),
+            user: { uid: "real-user-uid" },
+        };
+
+        await createBet(req, res);
+
+        expect(betService.createBet).toHaveBeenCalledWith(
+            expect.objectContaining({ outcomeA: "Dodgers win", outcomeB: "Dodgers lose" })
+        );
+    });
+
+    it("accepts a non-monetary bet with the creator on side B", async () => {
+        betService.createBet.mockResolvedValue({ id: "x" });
+
+        const req = {
+            body: validBody({
+                stakeType: "nonMonetary",
+                stakeAmountCents: undefined,
+                currency: undefined,
+                stakeDescription: "Loser buys dinner",
+                creatorSide: "B",
+            }),
+            user: { uid: "real-user-uid" },
+        };
+
+        await createBet(req, res);
+
+        expect(res.statusCode).toBe(201);
+        expect(betService.createBet).toHaveBeenCalledWith(
+            expect.objectContaining({ creatorSide: "B", stakeDescription: "Loser buys dinner" })
+        );
+    });
+
+    it("never forwards client-supplied participant or server-owned fields to the service", async () => {
+        betService.createBet.mockResolvedValue({ id: "x" });
+
+        const req = {
+            body: validBody({
+                participantUids: ["someone-else"],
+                participantCount: 999,
+                sideACount: 999,
+                sideBCount: 999,
+                joinedAt: "2020-01-01T00:00:00.000Z",
+                status: "active",
+                createdAt: "2020-01-01T00:00:00.000Z",
+            }),
+            user: { uid: "real-user-uid" },
+        };
+
+        await createBet(req, res);
+
+        expect(res.statusCode).toBe(201);
+        const [serviceArgs] = betService.createBet.mock.calls[0];
+        [
+            "participantUids",
+            "participantCount",
+            "sideACount",
+            "sideBCount",
+            "joinedAt",
+            "status",
+            "createdAt",
+            "termsAcknowledged",
+        ].forEach((field) => expect(serviceArgs).not.toHaveProperty(field));
     });
 
     it("derives creatorUid from req.user, never from the request body", async () => {
