@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {useNavigate, Link} from "react-router-dom";
-import {registerUser} from "../services/authService";
+import {registerUser, sendVerificationEmail} from "../services/authService";
 import { getFriendlyErrorMessage } from "../utils/authErrorMessages";
 import "./AuthPages.css";
 
@@ -44,8 +44,15 @@ function RegisterPage() {
         try {
             // Firebase automatically signs in a newly registered user, so by the time this resolves,
             // the user is already authenticated and we can navigate to the home screen.
-            await registerUser(email,password);
+            const user = await registerUser(email,password);
+            let verificationEmailFailed = false;
             navigate("/home");
+            try {
+                await sendVerificationEmail(user);
+            } catch {
+                verificationEmailFailed = true;
+            }
+            navigate("/verify-email", {state: {verificationEmailFailed}});
         } catch (error) {
             // error.code is Firebase's machine-readable error identifier...
             setError(getFriendlyErrorMessage(error.code));

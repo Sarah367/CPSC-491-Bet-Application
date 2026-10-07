@@ -202,6 +202,14 @@
     color: var(--text);
     text-decoration: none;
     font-weight: 600;
+    white-space: nowrap;
+}
+
+.create-bet-link-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
 }
 
 .create-bet-secondary:hover {
