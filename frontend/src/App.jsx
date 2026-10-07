@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
+import MyBetsPage from './pages/MyBetsPage';
 import CreateBetPage from './pages/CreateBetPage';
 import './App.css'
 import VerifyEmailPage from './pages/VerifyEmailPage';
@@ -15,6 +16,7 @@ function App() {
         <Route path="/register" element={<RegisterPage/>} />
         <Route path="/home" element={<HomePage/>}/>
         <Route path="/profile" element={<ProfilePage/>}/>
+        <Route path="/my-bets" element={<MyBetsPage/>}/>
         <Route path="/bets/create" element={<CreateBetPage/>}/>
         <Route path="/verify-email" element={<VerifyEmailPage/>}/>
       </Routes>

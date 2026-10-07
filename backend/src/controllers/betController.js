@@ -131,4 +131,21 @@ async function createBet(req, res) {
     }
 }
 
-module.exports = { createBet, validateCreateBetBody};
+// GET /api/bets/mine - requires authMiddleware to have already run and populated req.user.
+// The creator uid comes only from the verified token; any uid/creatorUid in the
+// query, body, or headers is ignored.
+async function listMyBets(req, res) {
+    try {
+        const bets = await betService.getBetsByCreator(req.user.uid);
+
+        return res.status(200).json({ bets });
+    } catch (error) {
+        console.error("[betController] Failed to list the user's bets: ", error);
+        return res.status(500).json({
+            error: "server_error",
+            message: "Unable to load your bets.",
+        });
+    }
+}
+
+module.exports = { createBet, validateCreateBetBody, listMyBets };
