@@ -137,7 +137,7 @@ async function createBet(req, res) {
 async function listMyBets(req, res) {
     try {
         const bets = await betService.getBetsByCreator(req.user.uid);
-
+ 
         return res.status(200).json({ bets });
     } catch (error) {
         console.error("[betController] Failed to list the user's bets: ", error);
@@ -147,5 +147,21 @@ async function listMyBets(req, res) {
         });
     }
 }
+ 
+// GET /api/bets/public - requires authMiddleware to have already run.
+// Returns every Bet marked as public, regardless of who created it.
+async function listPublicBets(req, res) {
+    try {
+        const bets = await betService.listPublicBets();
+ 
+        return res.status(200).json({ bets });
+    } catch (error) {
+        console.error("[betController] Failed to list public bets: ", error);
+        return res.status(500).json({
+            error: "server_error",
+            message: "Unable to list public bets.",
+        });
+    }
+}
 
-module.exports = { createBet, validateCreateBetBody, listMyBets };
+module.exports = { createBet, validateCreateBetBody, listMyBets, listPublicBets};
