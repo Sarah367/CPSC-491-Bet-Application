@@ -35,27 +35,61 @@ function RadioGroup({legend, name, options, value, onChange,error}) {
     );
 }
 
-function TextField({id, label,error,multiline=false, ...inputProps}) {
+function TextField({id, label, error, hint, multiline=false, ...inputProps}) {
     const errorId = `${id}-error`;
+    const hintId = `${id}-hint`;
+    const describedBy = [hint && hintId, error && errorId].filter(Boolean).join(" ") || undefined;
     const sharedProps = {
         id,
         name: id,
         "aria-invalid": error ? true : undefined,
-        "aria-describedby": error ? errorId : undefined,
+        "aria-describedby": describedBy,
         ...inputProps,
     };
     return (
         <div className="create-bet-field">
             <label htmlFor={id}>{label}</label>
+            {hint && <p id={hintId} className="create-bet-hint">{hint}</p>}
             {multiline ? <textarea rows={3} {...sharedProps} /> : <input {...sharedProps} />}
             {error && <p id={errorId} className="create-bet-field-error">{error}</p>}
         </div>
     )
 }
 
+function CheckboxField({ id, label, checked, onChange, error }) {
+    const errorId = `${id}-error`;
+    return (
+        <div className="create-bet-field">
+            <label className="create-bet-checkbox" htmlFor={id}>
+                <input
+                    id={id}
+                    name={id}
+                    type="checkbox"
+                    checked={checked}
+                    onChange={onChange}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? errorId : undefined}
+                />
+                <span>{label}</span>
+            </label>
+            {error && <p id={errorId} className="create-bet-field-error">{error}</p>}
+        </div>
+    );
+}
+
+// Shows the creator's own outcome text on each side option once it's typed, e.g. "Dodgers win",
+// and falls back to "Side A" / "Side B" while the outcome field is still empty.
+function sideLabel(outcome, fallback) {
+    const trimmed = outcome.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+}
+
 function getSubmitErrorMessage(error) {
     if (error instanceof NotAuthenticatedError || (error instanceof ApiError && error.status === 401)) {
         return "Your session has expired. Please log in again.";
+    }
+    if (error instanceof ApiError && error.status === 403 && error.body?.error === "email_not_verified") {
+        return "Please verify your email before creating a bet.";
     }
     if (error instanceof ApiError && error.status === 400 && error.body?.message) {
         return `Couldn't create bet: ${error.body.message}`;
@@ -64,7 +98,7 @@ function getSubmitErrorMessage(error) {
 }
 
 function CreateBetPage() {
-    const { loading, isAuthenticated } = useAuth();
+    const { loading, isAuthenticated, emailVerified } = useAuth();
     const [formData, setFormData] = useState(INITIAL_FORM_DATA);
     const [errors, setErrors] = useState({});
     const [submitError, setSubmitError] = useState("");
@@ -79,8 +113,28 @@ function CreateBetPage() {
         return <Navigate to="/login" replace />;
     }
 
+    if (emailVerified === false) {
+        return (
+            <div className="create-bet-page">
+                <main className="create-bet-main">
+                    <section className="create-bet-success">
+                        <h1>Verify your email first</h1>
+                        <p>You need to verify your email before you can create a bet.</p>
+                        <div className="create-bet-success-actions">
+                            <Link to="/verify-email" className="create-bet-submit create-bet-link-button">
+                                Verify Email
+                            </Link>
+                            <Link to="/home" className="create-bet-secondary">Back to Home</Link>
+                        </div>
+                    </section>
+                </main>
+            </div>
+        );
+    }
+
     function handleChange(event) {
-        const { name, value } = event.target;
+        const { name, type, checked } = event.target;
+        const value = type === "checkbox" ? checked : event.target.value;
 
         setFormData((prev) => {
             const next = { ...prev, [name]: value };
@@ -182,12 +236,40 @@ function CreateBetPage() {
                             error={errors.description}
                         />
                         <TextField
+                            id="outcomeA"
+                            label="Outcome A"
+                            type="text"
+                            placeholder="Dodgers win"
+                            value={formData.outcomeA}
+                            onChange={handleChange}
+                            error={errors.outcomeA}
+                        />
+                        <TextField
+                            id="outcomeB"
+                            label="Outcome B"
+                            type="text"
+                            placeholder="Dodgers lose"
+                            value={formData.outcomeB}
+                            onChange={handleChange}
+                            error={errors.outcomeB}
+                        />
+                        <TextField
                             id="deadline"
-                            label="Deadline"
+                            label="Participation Deadline"
                             type="datetime-local"
                             value={formData.deadline}
                             onChange={handleChange}
                             error={errors.deadline}
+                            hint="After this, no one else can join."
+                        />
+                        <TextField
+                            id="outcomeDeadline"
+                            label="Outcome Deadline"
+                            type="datetime-local"
+                            value={formData.outcomeDeadline}
+                            onChange={handleChange}
+                            error={errors.outcomeDeadline}
+                            hint="When the result should be known. Must be after the participation deadline."
                         />
                     </fieldset>
 
@@ -262,6 +344,28 @@ function CreateBetPage() {
                         )}
                     </fieldset>
 
+                    <fieldset className="create-bet-section">
+                        <legend>Your Side</legend>
+                        <RadioGroup
+                            legend="Which side are you taking?"
+                            name="creatorSide"
+                            value={formData.creatorSide}
+                            onChange={handleChange}
+                            error={errors.creatorSide}
+                            options={[
+                                { value: "A", label: sideLabel(formData.outcomeA, "Side A") },
+                                { value: "B", label: sideLabel(formData.outcomeB, "Side B") },
+                            ]}
+                        />
+                        <CheckboxField
+                            id="termsAcknowledged"
+                            label="I acknowledge the terms of this bet and agree to honor the outcome."
+                            checked={formData.termsAcknowledged}
+                            onChange={handleChange}
+                            error={errors.termsAcknowledged}
+                        />
+                    </fieldset>
+
                     <button type="submit" className="create-bet-submit" disabled={isSubmitting}>
                         {isSubmitting ? "Creating..." : "Create Bet"}
                     </button>
@@ -272,4 +376,3 @@ function CreateBetPage() {
 }
 
 export default CreateBetPage;
-

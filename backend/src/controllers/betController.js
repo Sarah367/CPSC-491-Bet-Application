@@ -2,6 +2,7 @@ const {
     isValidVisibility,
     isValidResolutionMethod,
     isValidStakeType,
+    isValidBetSide,
     BET_STAKE_TYPE,
 } = require("../models/betModel");
 const betService = require("../services/betService");
@@ -18,9 +19,21 @@ function isPositiveInteger(value) {
     return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
+// Outcomes are compared after trimming and ignoring case, so "Yes" and " yes " count as the same side.
+function normalizeOutcome(value) {
+    return value.trim().toLowerCase();
+}
+
+function parseDate(value) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 // Validates the POST /api/bets request body. Only fields the client is allowed to control are checked here:
-// title, description, deadline, visibility, resolutionMethod.
-// creatorUid, createdAt, and status are never read from the body, but always set by the backend.
+// title, description, outcomeA, outcomeB, deadline, outcomeDeadline, visibility, resolutionMethod,
+// stake fields, creatorSide, and termsAcknowledged.
+// creatorUid, createdAt, status, and all participant summary fields (participantUids, participantCount,
+// sideACount, sideBCount) are never read from the body. The backend always sets them.
 
 function validateCreateBetBody(body) {
     if (isBlankString(body.title)) {
@@ -29,6 +42,18 @@ function validateCreateBetBody(body) {
 
     if (isBlankString(body.description)) {
         return { valid: false, message: "description is required."};
+    }
+
+    if (isBlankString(body.outcomeA)) {
+        return { valid: false, message: "outcomeA is required." };
+    }
+
+    if (isBlankString(body.outcomeB)) {
+        return { valid: false, message: "outcomeB is required." };
+    }
+
+    if (normalizeOutcome(body.outcomeA) === normalizeOutcome(body.outcomeB)) {
+        return { valid: false, message: "outcomeA and outcomeB must be different." };
     }
 
     if (!isValidVisibility(body.visibility)) {
@@ -46,14 +71,29 @@ function validateCreateBetBody(body) {
         return { valid: false, message: "deadline is required." };
     }
 
-    const parsedDeadline = new Date(body.deadline);
+    const parsedDeadline = parseDate(body.deadline);
 
-    if (Number.isNaN(parsedDeadline.getTime())) {
+    if (!parsedDeadline) {
         return { valid: false, message: "deadline must be a valid date."};
     }
 
     if (parsedDeadline.getTime() <= Date.now()) {
         return { valid: false, message: "deadline must be in the future."};
+    }
+
+    if (isBlankString(body.outcomeDeadline)) {
+        return { valid: false, message: "outcomeDeadline is required." };
+    }
+
+    const parsedOutcomeDeadline = parseDate(body.outcomeDeadline);
+
+    if (!parsedOutcomeDeadline) {
+        return { valid: false, message: "outcomeDeadline must be a valid date." };
+    }
+
+    // Strictly later: a Bet should never lock and become due for resolution at the same moment.
+    if (parsedOutcomeDeadline.getTime() <= parsedDeadline.getTime()) {
+        return { valid: false, message: "outcomeDeadline must be after deadline." };
     }
 
     if (!isValidStakeType(body.stakeType)) {
@@ -84,7 +124,16 @@ function validateCreateBetBody(body) {
         };
     }
 
-    return { valid: true, deadline: parsedDeadline };
+    if (!isValidBetSide(body.creatorSide)) {
+        return { valid: false, message: "creatorSide must be \"A\" or \"B\"." };
+    }
+
+    // Must be the boolean true. Truthy values like "true" or 1 are rejected on purpose.
+    if (body.termsAcknowledged !== true) {
+        return { valid: false, message: "termsAcknowledged must be true to create a bet." };
+    }
+
+    return { valid: true, deadline: parsedDeadline, outcomeDeadline: parsedOutcomeDeadline };
 }
 
 // POST/api/bets - requires authMiddleware to have already run and populated req.user.
@@ -109,13 +158,17 @@ async function createBet(req, res) {
         const bet = await betService.createBet({
             title: req.body.title.trim(),
             description: req.body.description.trim(),
+            outcomeA: req.body.outcomeA.trim(),
+            outcomeB: req.body.outcomeB.trim(),
             // creatorUid comes from verified token - never from request body (prevents spoofing the time/date)
             creatorUid: req.user.uid,
             deadline: validation.deadline,
+            outcomeDeadline: validation.outcomeDeadline,
             visibility: req.body.visibility,
             resolutionMethod: req.body.resolutionMethod,
             stakeType: req.body.stakeType,
             ...stakeFields,
+            creatorSide: req.body.creatorSide,
         });
 
         return res.status(201).json({

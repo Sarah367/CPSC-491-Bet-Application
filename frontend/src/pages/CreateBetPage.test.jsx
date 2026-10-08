@@ -1,5 +1,5 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { apiPost, ApiError } from "../services/apiClient";
@@ -44,14 +44,40 @@ function toDateTimeLocal(date) {
     const pad = (n) => String(n).padStart(2, "0");
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+const DAY_MS = 24 * 60 * 60 * 1000;
+const tomorrow = toDateTimeLocal(new Date(Date.now() + DAY_MS));
+const dayAfterTomorrow = toDateTimeLocal(new Date(Date.now() + 2 * DAY_MS));
 
-const tomorrow = toDateTimeLocal(new Date(Date.now() + 24 * 60 * 60 * 1000));
-
-function fillBetDetails({ title = "Will the Dodgers win Friday?", deadline = tomorrow } = {}) {
+// Fills in everything except the stake, with the creator on side A and the terms acknowledged.
+function fillBetDetails({
+    title = "Will the Dodgers win Friday?",
+    outcomeA = "Dodgers win",
+    outcomeB = "Dodgers lose",
+    deadline = tomorrow,
+    outcomeDeadline = dayAfterTomorrow,
+    creatorSide = "A",
+    acknowledgeTerms = true,
+} = {}) {
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: title } });
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Regular season game" } });
-    fireEvent.change(screen.getByLabelText("Deadline"), { target: { value: deadline } });
+    fireEvent.change(screen.getByLabelText("Outcome A"), { target: { value: outcomeA } });
+    fireEvent.change(screen.getByLabelText("Outcome B"), { target: { value: outcomeB } });
+    fireEvent.change(screen.getByLabelText("Participation Deadline"), { target: { value: deadline } });
+    fireEvent.change(screen.getByLabelText("Outcome Deadline"), { target: { value: outcomeDeadline } });
     fireEvent.click(screen.getByRole("radio", { name: "External verification" }));
+    if (creatorSide) {
+        const sideGroup = screen.getByRole("group", { name: "Which side are you taking?" });
+        const radios = within(sideGroup).getAllByRole("radio");
+        fireEvent.click(radios.find((radio) => radio.value === creatorSide));
+    }
+    if (acknowledgeTerms) {
+        fireEvent.click(screen.getByRole("checkbox", { name: /acknowledge the terms/i }));
+    }
+}
+
+function chooseNonMonetaryStake(description = "Loser buys dinner") {
+    fireEvent.click(screen.getByRole("radio", { name: "Non-monetary" }));
+    fireEvent.change(screen.getByLabelText("What's being wagered?"), { target: { value: description } });
 }
 
 function submit() {
@@ -65,6 +91,7 @@ describe("CreateBetPage access", () => {
             currentUser: { uid: "abc123", email: "test@example.com" },
             loading: false,
             isAuthenticated: true,
+            emailVerified: true,
         });
     });
 
@@ -84,6 +111,22 @@ describe("CreateBetPage access", () => {
         renderAtCreateBet();
         expect(screen.getByRole("heading", { level: 1, name: "Create a Bet" })).toBeInTheDocument();
     });
+
+    it("blocks the form for an authenticated user whose email is not verified", () => {
+        useAuth.mockReturnValue({
+            currentUser: { uid: "abc123", email: "test@example.com" },
+            loading: false,
+            isAuthenticated: true,
+            emailVerified: false,
+        });
+        renderAtCreateBet();
+
+        expect(screen.getByRole("heading", { level: 1, name: "Verify your email first" })).toBeInTheDocument();
+        expect(screen.getByText("You need to verify your email before you can create a bet.")).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Verify Email" })).toHaveAttribute("href", "/verify-email");
+        expect(screen.queryByRole("button", { name: "Create Bet" })).not.toBeInTheDocument();
+        expect(screen.queryByLabelText("Title")).not.toBeInTheDocument();
+    });
 });
 
 describe("CreateBetPage form", () => {
@@ -93,6 +136,7 @@ describe("CreateBetPage form", () => {
             currentUser: { uid: "abc123", email: "test@example.com" },
             loading: false,
             isAuthenticated: true,
+            emailVerified: true,
         });
     });
 
@@ -111,9 +155,14 @@ describe("CreateBetPage form", () => {
         expect(await screen.findByRole("alert")).toHaveTextContent("Please fix the highlighted fields.");
         expect(screen.getByText("Title is required.")).toBeInTheDocument();
         expect(screen.getByText("Description is required.")).toBeInTheDocument();
-        expect(screen.getByText("Deadline is required.")).toBeInTheDocument();
+        expect(screen.getByText("Outcome A is required.")).toBeInTheDocument();
+        expect(screen.getByText("Outcome B is required.")).toBeInTheDocument();
+        expect(screen.getByText("Participation deadline is required.")).toBeInTheDocument();
+        expect(screen.getByText("Outcome deadline is required.")).toBeInTheDocument();
         expect(screen.getByText("Choose how this bet will be resolved.")).toBeInTheDocument();
         expect(screen.getByText("Choose a stake type.")).toBeInTheDocument();
+        expect(screen.getByText("Choose which side you're taking.")).toBeInTheDocument();
+        expect(screen.getByText("You must acknowledge the bet terms to create a bet.")).toBeInTheDocument();
         expect(apiPost).not.toHaveBeenCalled();
     });
 
@@ -148,7 +197,7 @@ describe("CreateBetPage form", () => {
         fireEvent.change(screen.getByLabelText("What's being wagered?"), { target: { value: "Loser buys dinner" } });
         submit();
 
-        expect(await screen.findByText("Deadline must be in the future.")).toBeInTheDocument();
+        expect(await screen.findByText("Participation deadline must be in the future.")).toBeInTheDocument();
         expect(apiPost).not.toHaveBeenCalled();
     });
 
@@ -164,12 +213,17 @@ describe("CreateBetPage form", () => {
         expect(apiPost).toHaveBeenCalledWith("/bets", {
             title: "Will the Dodgers win Friday?",
             description: "Regular season game",
+            outcomeA: "Dodgers win",
+            outcomeB: "Dodgers lose",
             deadline: new Date(tomorrow).toISOString(),
+            outcomeDeadline: new Date(dayAfterTomorrow).toISOString(),
             visibility: "public",
             resolutionMethod: "external",
             stakeType: "monetary",
             stakeAmountCents: 1050,
             currency: "USD",
+            creatorSide: "A",
+            termsAcknowledged: true,
         });
     });
 
@@ -229,6 +283,24 @@ describe("CreateBetPage form", () => {
         );
     });
 
+    it("tells the user to verify their email when the API returns 403 email_not_verified", async () => {
+        apiPost.mockRejectedValueOnce(
+            new ApiError(403, {
+                error: "email_not_verified",
+                message: "Please verify your email before creating or joining bets.",
+            })
+        );
+        renderAtCreateBet();
+        fillBetDetails();
+        fireEvent.click(screen.getByRole("radio", { name: "Non-monetary" }));
+        fireEvent.change(screen.getByLabelText("What's being wagered?"), { target: { value: "Loser buys dinner" } });
+        submit();
+
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+            "Please verify your email before creating a bet."
+        );
+    });
+
     it("shows a generic message for unexpected failures", async () => {
         apiPost.mockRejectedValueOnce(new Error("network down"));
         renderAtCreateBet();
@@ -256,5 +328,88 @@ describe("CreateBetPage form", () => {
 
         resolveRequest({ message: "Bet created successfully.", bet: { id: "bet4", title: "Will the Dodgers win Friday?" } });
         expect(await screen.findByRole("heading", { name: "Bet created!" })).toBeInTheDocument();
+    });
+
+        it("labels the side options with the outcomes once they're typed", () => {
+        renderAtCreateBet();
+        const sideGroup = screen.getByRole("group", { name: "Which side are you taking?" });
+
+        expect(within(sideGroup).getByRole("radio", { name: "Side A" })).toBeInTheDocument();
+        expect(within(sideGroup).getByRole("radio", { name: "Side B" })).toBeInTheDocument();
+
+        fireEvent.change(screen.getByLabelText("Outcome A"), { target: { value: "  Dodgers win " } });
+        fireEvent.change(screen.getByLabelText("Outcome B"), { target: { value: "Dodgers lose" } });
+
+        expect(within(sideGroup).getByRole("radio", { name: "Dodgers win" })).toBeInTheDocument();
+        expect(within(sideGroup).getByRole("radio", { name: "Dodgers lose" })).toBeInTheDocument();
+    });
+
+    it("rejects outcomes that only differ by case", async () => {
+        renderAtCreateBet();
+        fillBetDetails({ outcomeA: "Yes", outcomeB: "YES" });
+        chooseNonMonetaryStake();
+        submit();
+
+        expect(await screen.findByText("Outcome B must be different from Outcome A.")).toBeInTheDocument();
+        expect(apiPost).not.toHaveBeenCalled();
+    });
+
+    it("rejects an outcome deadline before the participation deadline", async () => {
+        renderAtCreateBet();
+        fillBetDetails({ deadline: dayAfterTomorrow, outcomeDeadline: tomorrow });
+        chooseNonMonetaryStake();
+        submit();
+
+        expect(
+            await screen.findByText("Outcome deadline must be after the participation deadline.")
+        ).toBeInTheDocument();
+        expect(apiPost).not.toHaveBeenCalled();
+    });
+
+    it("blocks submission until the terms are acknowledged", async () => {
+        renderAtCreateBet();
+        fillBetDetails({ acknowledgeTerms: false });
+        chooseNonMonetaryStake();
+        submit();
+
+        expect(
+            await screen.findByText("You must acknowledge the bet terms to create a bet.")
+        ).toBeInTheDocument();
+        expect(screen.getByRole("checkbox", { name: /acknowledge the terms/i })).toHaveAttribute(
+            "aria-invalid",
+            "true"
+        );
+        expect(apiPost).not.toHaveBeenCalled();
+    });
+
+    it("sends side B and never sends participant summary fields", async () => {
+        apiPost.mockResolvedValueOnce({ message: "Bet created successfully.", bet: { id: "bet5", title: "Will the Dodgers win Friday?" } });
+        renderAtCreateBet();
+        fillBetDetails({ creatorSide: "B" });
+        chooseNonMonetaryStake();
+        submit();
+
+        await waitFor(() => expect(apiPost).toHaveBeenCalledTimes(1));
+        const [, payload] = apiPost.mock.calls[0];
+        expect(payload.creatorSide).toBe("B");
+        expect(payload.termsAcknowledged).toBe(true);
+        ["participantUids", "participantCount", "sideACount", "sideBCount", "creatorUid", "status"].forEach(
+            (field) => expect(payload).not.toHaveProperty(field)
+        );
+    });
+
+    it("clears the form, including the side and terms, after creating another bet", async () => {
+        apiPost.mockResolvedValueOnce({ message: "Bet created successfully.", bet: { id: "bet6", title: "Will the Dodgers win Friday?" } });
+        renderAtCreateBet();
+        fillBetDetails();
+        chooseNonMonetaryStake();
+        submit();
+
+        fireEvent.click(await screen.findByRole("button", { name: "Create another bet" }));
+
+        expect(screen.getByLabelText("Outcome A")).toHaveValue("");
+        expect(screen.getByRole("checkbox", { name: /acknowledge the terms/i })).not.toBeChecked();
+        const sideGroup = screen.getByRole("group", { name: "Which side are you taking?" });
+        within(sideGroup).getAllByRole("radio").forEach((radio) => expect(radio).not.toBeChecked());
     });
 });

@@ -56,7 +56,7 @@
     padding: 0;
 }
 
-.create-bet-field input,
+.create-bet-field input:not([type="checkbox"]),
 .create-bet-field textarea {
     width: 100%;
     box-sizing: border-box;
@@ -79,12 +79,12 @@
     color-scheme: dark;
 }
 
-.create-bet-field input:focus,
+.create-bet-field input:not([type="checkbox"]):focus,
 .create-bet-field textarea:focus {
     border-color: var(--accent);
 }
 
-.create-bet-field input[aria-invalid="true"],
+.create-bet-field input:not([type="checkbox"])[aria-invalid="true"],
 .create-bet-field textarea[aria-invalid="true"] {
     border-color: var(--danger);
 }
@@ -121,6 +121,41 @@
 .create-bet-radio input {
     accent-color: var(--accent);
     margin: 0;
+}
+
+.create-bet-hint {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: -2px 0 8px;
+}
+
+.create-bet-field .create-bet-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    margin: 0;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.create-bet-field .create-bet-checkbox:has(input:checked) {
+    border-color: var(--accent);
+}
+
+.create-bet-field .create-bet-checkbox:has(input[aria-invalid="true"]) {
+    border-color: var(--danger);
+}
+
+.create-bet-field .create-bet-checkbox input {
+    margin: 3px 0 0;
+    accent-color: var(--accent);
+    flex-shrink: 0;
 }
 
 .create-bet-field-error {
@@ -202,6 +237,14 @@
     color: var(--text);
     text-decoration: none;
     font-weight: 600;
+    white-space: nowrap;
+}
+
+.create-bet-link-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
 }
 
 .create-bet-secondary:hover {
