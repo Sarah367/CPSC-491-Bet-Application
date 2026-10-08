@@ -196,6 +196,18 @@ describe("POST /api/bets (Create Bet Integration)", () => {
             expect(written).not.toHaveProperty("currency");
         });
 
+        it("creates a valid monetary Bet and does not store a stakeDescription", async () => {
+            const res = await postBet(validMonetaryBody({
+                stakeDescription: "Should be ignored",
+            }));
+
+            expect(res.status).toBe(201);
+            const written = dataWrittenTo(mockBetRef);
+            expect(written.stakeType).toBe("monetary");
+            expect(written.stakeAmountCents).toBe(1000);
+            expect(written).not.toHaveProperty("stakeDescription");
+        });
+
         it("trims whitespace from text fields before saving", async () => {
             const res = await postBet(validMonetaryBody({
                 title: "  Padded title  ",
