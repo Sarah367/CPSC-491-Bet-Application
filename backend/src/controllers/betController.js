@@ -164,4 +164,4 @@ async function listPublicBets(req, res) {
     }
 }
 
-module.exports = { createBet, validateCreateBetBody, listMyBets };
+module.exports = { createBet, validateCreateBetBody, listMyBets, listPublicBets};
