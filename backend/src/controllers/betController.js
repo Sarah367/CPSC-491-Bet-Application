@@ -131,12 +131,29 @@ async function createBet(req, res) {
     }
 }
 
+// GET /api/bets/mine - requires authMiddleware to have already run and populated req.user.
+// The creator uid comes only from the verified token; any uid/creatorUid in the
+// query, body, or headers is ignored.
+async function listMyBets(req, res) {
+    try {
+        const bets = await betService.getBetsByCreator(req.user.uid);
+ 
+        return res.status(200).json({ bets });
+    } catch (error) {
+        console.error("[betController] Failed to list the user's bets: ", error);
+        return res.status(500).json({
+            error: "server_error",
+            message: "Unable to load your bets.",
+        });
+    }
+}
+ 
 // GET /api/bets/public - requires authMiddleware to have already run.
 // Returns every Bet marked as public, regardless of who created it.
 async function listPublicBets(req, res) {
     try {
         const bets = await betService.listPublicBets();
-
+ 
         return res.status(200).json({ bets });
     } catch (error) {
         console.error("[betController] Failed to list public bets: ", error);
@@ -147,4 +164,4 @@ async function listPublicBets(req, res) {
     }
 }
 
-module.exports = { createBet, validateCreateBetBody, listPublicBets };
+module.exports = { createBet, validateCreateBetBody, listMyBets };

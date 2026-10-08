@@ -39,10 +39,40 @@ async function createBet({
 }
 
 
+// Firestore Timestamps serialize to {_seconds, _nanoseconds} in JSON, so convert
+// them to ISO strings before a Bet leaves the backend.
+function timestampToIso(value) {
+    return value instanceof Timestamp ? value.toDate().toISOString() : value ?? null;
+}
+ 
+function serializeBetDoc(doc) {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        ...data,
+        createdAt: timestampToIso(data.createdAt),
+        deadline: timestampToIso(data.deadline),
+    };
+}
+ 
+// Returns every Bet created by the given uid, newest first. Sorted in memory
+// rather than with orderBy in the query, because combining where(creatorUid)
+// with orderBy(createdAt) requires a Firestore composite index.
+async function getBetsByCreator(uid) {
+    const snapshot = await db
+        .collection(BET_COLLECTION)
+        .where("creatorUid", "==", uid)
+        .get();
+ 
+    return snapshot.docs
+        .map(serializeBetDoc)
+        .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+}
+ 
 function toIsoString(value) {
     return value instanceof Timestamp ? value.toDate().toISOString() : value;
 }
-
+ 
 function serializeBet(doc) {
     const data = doc.data();
     return {
@@ -55,7 +85,7 @@ function serializeBet(doc) {
         createdAt: toIsoString(data.createdAt),
     };
 }
-
+ 
 // Sorted in memory (rather than an orderBy in the query) so this simple listing
 // doesn't require a Firestore composite index on (visibility, createdAt).
 async function listPublicBets() {
@@ -63,10 +93,10 @@ async function listPublicBets() {
         .collection(BET_COLLECTION)
         .where("visibility", "==", BET_VISIBILITY.PUBLIC)
         .get();
-
+ 
     return snapshot.docs
         .map(serializeBet)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
-
-module.exports = { createBet, listPublicBets };
+ 
+module.exports = { createBet, getBetsByCreator, listPublicBets };
