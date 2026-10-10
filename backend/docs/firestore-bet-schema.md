@@ -31,7 +31,7 @@ bets/{betId}
 | `status`            | enum                |   Yes    | `"draft"` \| `"active"` \| `"locked"` \| `"resolved"` \| `"archived"` — new bets start at `"draft"` |
 | `stakeType`         | enum                |   Yes    | `"monetary"` \| `"nonMonetary"`        |
 | `stakeAmountCents`  | number               | If `stakeType` is `"monetary"` | Stake amount, in cents (avoids floating-point issues) |
-| `currency`          | string               | If `stakeType` is `"monetary"` | e.g. `"USD"` |
+| `currency`          | string               | If `stakeType` is `"monetary"` | Must be a supported currency. Currently only `"USD"` |
 | `stakeDescription`  | string               | If `stakeType` is `"nonMonetary"` | e.g. `"Loser buys dinner"` |
 | `participantUids`   | string[]             |   Yes    | UIDs of everyone in the Bet. Starts as `[creatorUid]` (server-derived) |
 | `participantCount`  | number               |   Yes    | Number of participants. Starts at `1` (server-derived) |

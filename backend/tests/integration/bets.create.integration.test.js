@@ -408,6 +408,9 @@ describe("POST /api/bets (Create Bet Integration)", () => {
             ["an empty string", ""],
             ["only whitespace", "   "],
             ["not a string", 840],
+            ["an unsupported code (\"XYZ\")", "XYZ"],
+            ["a real but unsupported code (\"EUR\")", "EUR"],
+            ["lowercase (\"usd\")", "usd"],
         ])("returns 400 when currency is %s", async (_label, value) => {
             const body = value === undefined
                 ? without(validMonetaryBody(), "currency")

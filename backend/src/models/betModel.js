@@ -35,11 +35,16 @@ const BET_PARTICIPANT_ROLE = Object.freeze({
     PARTICIPANT: "participant"
 });
 
+const BET_CURRENCY = Object.freeze({
+    USD: "USD",
+});
+
 const VALID_VISIBILITY_VALUES = Object.values(BET_VISIBILITY);
 const VALID_RESOLUTION_METHOD_VALUES = Object.values(BET_RESOLUTION_METHOD);
 const VALID_STATUS_VALUES = Object.values(BET_STATUS);
 const VALID_STAKE_TYPE_VALUES = Object.values(BET_STAKE_TYPE);
 const VALID_BET_SIDE_VALUES = Object.values(BET_SIDE);
+const VALID_CURRENCY_VALUES = Object.values(BET_CURRENCY);
 
 function isValidVisibility(value) {
     return VALID_VISIBILITY_VALUES.includes(value);
@@ -61,6 +66,10 @@ function isValidBetSide(value) {
     return VALID_BET_SIDE_VALUES.includes(value);
 }
 
+function isValidCurrency(value) {
+    return VALID_CURRENCY_VALUES.includes(value);
+}
+
 module.exports = {
     BET_COLLECTION,
     BET_PARTICIPANTS_SUBCOLLECTION,
@@ -71,13 +80,16 @@ module.exports = {
     BET_SIDE,
     BET_PARTICIPANT_ROLE,
     VALID_VISIBILITY_VALUES,
+    BET_CURRENCY,
     VALID_RESOLUTION_METHOD_VALUES,
     VALID_STATUS_VALUES,
     VALID_STAKE_TYPE_VALUES,
     VALID_BET_SIDE_VALUES,
+    VALID_CURRENCY_VALUES,
     isValidVisibility,
     isValidResolutionMethod,
     isValidStatus,
     isValidStakeType,
     isValidBetSide,
+    isValidCurrency,
 };

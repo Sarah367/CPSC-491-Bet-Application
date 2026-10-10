@@ -3,7 +3,9 @@ const {
     isValidResolutionMethod,
     isValidStakeType,
     isValidBetSide,
+    isValidCurrency,
     BET_STAKE_TYPE,
+    VALID_CURRENCY_VALUES,
 } = require("../models/betModel");
 const betService = require("../services/betService");
 
@@ -115,6 +117,12 @@ function validateCreateBetBody(body) {
             return {
                 valid: false,
                 message: "currency is required for monetary stakes."
+            };
+        }
+        if (!isValidCurrency(body.currency.trim())) {
+            return {
+                valid: false,
+                message: `currency must be one of: ${VALID_CURRENCY_VALUES.join(", ")}.`,
             };
         }
     } else if (isBlankString(body.stakeDescription)) {

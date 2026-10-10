@@ -124,6 +124,14 @@ describe("validateCreateBetBody", () => {
         expect(result.valid).toBe(false);
         expect(result.message).toMatch(/currency/i);
     });
+
+    it("rejects a monetary stake with an unsupported currency", () => {
+        const result = validateCreateBetBody(
+            validBody({ stakeType: "monetary", stakeAmountCents: 1000, currency: "XYZ" })
+        );
+        expect(result.valid).toBe(false);
+        expect(result.message).toBe("currency must be one of: USD.");
+    });
  
     it("accepts a valid monetary stake", () => {
         const result = validateCreateBetBody(
