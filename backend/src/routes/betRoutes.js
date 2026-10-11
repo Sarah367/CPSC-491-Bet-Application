@@ -1,14 +1,15 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
-const { createBet, listMyBets, listPublicBets } = require("../controllers/betController");
+const { createBet, listMyBets, listPublicBets, getBetById } = require("../controllers/betController");
 
 const router = express.Router();
 
 router.post("/", authMiddleware, createBet);
 
-// Static paths like /mine and /public must stay registered above any future /:id route,
+// Static paths like /mine and /public must stay registered above the /:id route below,
 // otherwise Express would match "mine" or "public" as an id.
 router.get("/mine", authMiddleware, listMyBets);
 router.get("/public", authMiddleware, listPublicBets);
+router.get("/:id", authMiddleware, getBetById);
 
 module.exports = router;

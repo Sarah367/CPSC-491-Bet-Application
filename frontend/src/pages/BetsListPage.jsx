@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { fetchPublicBets } from "../services/betService";
 
@@ -78,7 +78,7 @@ function BetsListPage() {
                     <tbody>
                         {bets.map((bet) => (
                             <tr key={bet.id}>
-                                <td>{bet.title}</td>
+                                <td><Link to={`/bets/${bet.id}`}>{bet.title}</Link></td>
                                 <td>{formatDeadline(bet.deadline)}</td>
                                 <td>{bet.visibility}</td>
                                 <td>{bet.status}</td>
