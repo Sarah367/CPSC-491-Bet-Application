@@ -1,16 +1,15 @@
 const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 const {db} = require("../config/firebaseAdmin");
-const { 
+const {
     BET_COLLECTION,
-    BET_PARTICIPANTS_SUBCOLLECTION, 
-    BET_STATUS, 
+    BET_PARTICIPANTS_SUBCOLLECTION,
+    BET_STATUS,
     BET_STAKE_TYPE,
     BET_SIDE,
     BET_PARTICIPANT_ROLE,
+    BET_VISIBILITY,
 } = require("../models/betModel");
-// Creates a Bet and its creator's participant record in one atomic batch, so a Bet can never
-// exist without its creator as participant #1 (or vice versa). The controller has already
-// validated every argument, including that the creator acknowledged the terms.
+
 async function createBet({
     title,
     description,
@@ -73,12 +72,13 @@ async function createBet({
     return { id: betRef.id, ...savedDoc.data()};
 }
 
+
 // Firestore Timestamps serialize to {_seconds, _nanoseconds} in JSON, so convert
 // them to ISO strings before a Bet leaves the backend.
 function timestampToIso(value) {
     return value instanceof Timestamp ? value.toDate().toISOString() : value ?? null;
 }
-
+ 
 function serializeBetDoc(doc) {
     const data = doc.data();
     return {
@@ -88,7 +88,7 @@ function serializeBetDoc(doc) {
         deadline: timestampToIso(data.deadline),
     };
 }
-
+ 
 // Returns every Bet created by the given uid, newest first. Sorted in memory
 // rather than with orderBy in the query, because combining where(creatorUid)
 // with orderBy(createdAt) requires a Firestore composite index.
@@ -97,10 +97,40 @@ async function getBetsByCreator(uid) {
         .collection(BET_COLLECTION)
         .where("creatorUid", "==", uid)
         .get();
-
+ 
     return snapshot.docs
         .map(serializeBetDoc)
         .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
 }
-
-module.exports = { createBet, getBetsByCreator };
+ 
+function toIsoString(value) {
+    return value instanceof Timestamp ? value.toDate().toISOString() : value;
+}
+ 
+function serializeBet(doc) {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        title: data.title,
+        deadline: toIsoString(data.deadline),
+        visibility: data.visibility,
+        status: data.status,
+        creatorUid: data.creatorUid,
+        createdAt: toIsoString(data.createdAt),
+    };
+}
+ 
+// Sorted in memory (rather than an orderBy in the query) so this simple listing
+// doesn't require a Firestore composite index on (visibility, createdAt).
+async function listPublicBets() {
+    const snapshot = await db
+        .collection(BET_COLLECTION)
+        .where("visibility", "==", BET_VISIBILITY.PUBLIC)
+        .get();
+ 
+    return snapshot.docs
+        .map(serializeBet)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+ 
+module.exports = { createBet, getBetsByCreator, listPublicBets };
