@@ -3,10 +3,15 @@ import {render, screen, fireEvent, waitFor} from "@testing-library/react";
 import {MemoryRouter, Routes, Route} from "react-router-dom";
 import {useAuth} from "../context/useAuth";
 import {logoutUser} from "../services/authService";
+import {fetchMyBets} from "../services/betService";
 import HomePage from "../pages/HomePage";
 
 vi.mock("../services/authService", () => ({
     logoutUser: vi.fn(),
+}));
+
+vi.mock("../services/betService", () => ({
+  fetchMyBets: vi.fn(),
 }));
 
 vi.mock("../context/useAuth", () => ({
@@ -38,6 +43,7 @@ describe("HomePage logout", () => {
             loading: false,
             isAuthenticated: true,
         });
+        fetchMyBets.mockReturnValue(new Promise(() => {}));
     });
 
   it("logs out successfully and navigates to /login", async () => {
@@ -119,6 +125,8 @@ describe("HomePage Create Bet navigation", () => {
           loading: false,
           isAuthenticated: true,
       });
+      fetchMyBets.mockReturnValue(new Promise(() => {}));
+
   });
 
   it("shows a Create a Bet link that points to /bets/create", () => {
@@ -142,4 +150,146 @@ describe("HomePage Create Bet navigation", () => {
 
       expect(screen.getByText("Create Bet Page")).toBeInTheDocument();
   });
+});
+ 
+function fakeBet(id, overrides = {}) {
+    return {
+        id,
+        title: `Bet ${id}`,
+        status: "draft",
+        visibility: "public",
+        deadline: "2026-10-20T18:00:00.000Z",
+        ...overrides,
+    };
+}
+ 
+describe("HomePage Recent Bets", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        useAuth.mockReturnValue({
+            currentUser: {uid: "abc123", email: "test@example.com"},
+            loading: false,
+            isAuthenticated: true,
+        });
+    });
+ 
+    it("no longer shows the old placeholder text", async () => {
+        fetchMyBets.mockResolvedValue([]);
+ 
+        renderHomePage();
+ 
+        await screen.findByText(/You haven't created any bets yet/);
+        expect(screen.queryByText("Your bets will show up here soon.")).not.toBeInTheDocument();
+    });
+ 
+    it("shows a loading message while the Bets are loading", () => {
+        // A promise that never resolves keeps the section in its loading state.
+        fetchMyBets.mockReturnValue(new Promise(() => {}));
+ 
+        renderHomePage();
+ 
+        expect(screen.getByText("Loading your recent bets...")).toBeInTheDocument();
+    });
+ 
+    it("shows the 3 most recent Bets in the order the API returns them", async () => {
+        fetchMyBets.mockResolvedValue([fakeBet("1"), fakeBet("2"), fakeBet("3")]);
+ 
+        renderHomePage();
+ 
+        const titles = await screen.findAllByRole("heading", { level: 3 });
+        expect(titles.map((title) => title.textContent)).toEqual(["Bet 1", "Bet 2", "Bet 3"]);
+        expect(fetchMyBets).toHaveBeenCalledTimes(1);
+    });
+ 
+    it("shows only the first 3 Bets when the API returns more", async () => {
+        fetchMyBets.mockResolvedValue([
+            fakeBet("1"), fakeBet("2"), fakeBet("3"), fakeBet("4"), fakeBet("5"),
+        ]);
+ 
+        renderHomePage();
+ 
+        const titles = await screen.findAllByRole("heading", { level: 3 });
+        expect(titles.map((title) => title.textContent)).toEqual(["Bet 1", "Bet 2", "Bet 3"]);
+        expect(screen.queryByText("Bet 4")).not.toBeInTheDocument();
+        expect(screen.queryByText("Bet 5")).not.toBeInTheDocument();
+    });
+ 
+    it("shows all Bets when the API returns fewer than 3", async () => {
+        fetchMyBets.mockResolvedValue([fakeBet("1"), fakeBet("2")]);
+ 
+        renderHomePage();
+ 
+        const titles = await screen.findAllByRole("heading", { level: 3 });
+        expect(titles.map((title) => title.textContent)).toEqual(["Bet 1", "Bet 2"]);
+    });
+ 
+    it("shows each Bet's status, visibility, and deadline", async () => {
+        fetchMyBets.mockResolvedValue([
+            fakeBet("1", { status: "active", visibility: "private" }),
+        ]);
+ 
+        renderHomePage();
+ 
+        expect(await screen.findByText("active")).toBeInTheDocument();
+        expect(screen.getByText("private")).toBeInTheDocument();
+        expect(screen.getByText(/^Deadline:/)).toBeInTheDocument();
+        expect(screen.queryByText("Deadline: No deadline")).not.toBeInTheDocument();
+    });
+ 
+    it("shows the empty state and keeps Create a Bet available when there are no Bets", async () => {
+        fetchMyBets.mockResolvedValue([]);
+ 
+        renderHomePage();
+ 
+        expect(
+            await screen.findByText("You haven't created any bets yet. Create a bet to get started!")
+        ).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Create a Bet" })).toHaveAttribute("href", "/bets/create");
+    });
+ 
+    it("shows an error for the section without hiding the rest of Home", async () => {
+        fetchMyBets.mockRejectedValue(new Error("network error"));
+        const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+ 
+        renderHomePage();
+ 
+        expect(
+            await screen.findByText("Unable to load your recent bets right now. Please try again later.")
+        ).toBeInTheDocument();
+        // The rest of Home still works.
+        expect(screen.getByText(/test@example.com/)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Log Out" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Create a Bet" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "View all" })).toBeInTheDocument();
+        // It is separate from the logout error, which uses role="alert".
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+ 
+        consoleSpy.mockRestore();
+    });
+ 
+    it("has a View all link that goes to /my-bets", async () => {
+        fetchMyBets.mockResolvedValue([fakeBet("1")]);
+ 
+        render(
+            <MemoryRouter initialEntries={["/home"]}>
+                <Routes>
+                    <Route path="/home" element={<HomePage />} />
+                    <Route path="/my-bets" element={<p>My Bets Page</p>} />
+                </Routes>
+            </MemoryRouter>
+        );
+ 
+        const viewAll = await screen.findByRole("link", { name: "View all" });
+        expect(viewAll).toHaveAttribute("href", "/my-bets");
+        fireEvent.click(viewAll);
+        expect(screen.getByText("My Bets Page")).toBeInTheDocument();
+    });
+ 
+    it("does not load Bets when the user is not logged in", () => {
+        useAuth.mockReturnValue({ currentUser: null, loading: false, isAuthenticated: false });
+ 
+        renderHomePage();
+ 
+        expect(fetchMyBets).not.toHaveBeenCalled();
+    });
 });
