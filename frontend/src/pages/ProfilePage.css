@@ -54,7 +54,8 @@
 }
 
 /* Display name value with the Edit button next to it. */
-.profile-name-value {
+.profile-name-value,
+.profile-verified-value {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -152,4 +153,9 @@
     .profile-row dd {
         flex: 1;
     }
+}
+
+/* Lets the Verify Email Link use the button styling. */
+a.profile-button {
+    text-decoration: none;
 }

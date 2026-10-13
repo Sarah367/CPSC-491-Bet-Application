@@ -1,0 +1,63 @@
+/* Builds on AuthPages.css (layout, .auth-card, .auth-submit) and only adds what
+   the Verify Email page needs. Uses existing design tokens only. */
+
+.verify-text {
+    color: var(--text-muted);
+    margin: 0 0 24px;
+}
+
+.verify-text strong {
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+.verify-status {
+    color: var(--text);
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    margin: 0 0 18px;
+}
+
+.verify-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Lets a Link use the .auth-submit button styling. */
+.verify-link-button {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    margin-top: 0;
+}
+
+.verify-secondary {
+    display: block;
+    width: 100%;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.verify-secondary:hover:not(:disabled) {
+    border-color: var(--accent);
+}
+
+.verify-secondary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}

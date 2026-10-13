@@ -1,5 +1,5 @@
 import {auth} from "./firebase";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, sendEmailVerification } from "firebase/auth";
 
 export {auth}
 
@@ -22,6 +22,18 @@ export async function loginUser(email, password) {
         return user;
     } catch (error) {
         console.error("Login failed: ", error.code, error.message);
+        throw error;
+    }
+}
+
+export async function sendVerificationEmail(user) {
+    if (!user) {
+        throw new Error("A signed-in user is required to send a verification email.");
+    }
+    try {
+        await sendEmailVerification(user, { url: `${window.location.origin}/verify-email` });
+    } catch (error) {
+        console.error("Sending verification email failed: ", error.code, error.message);
         throw error;
     }
 }

@@ -1,13 +1,16 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
+const requireVerifiedEmail = require("../middleware/requireVerifiedEmail");
 const { createBet, listMyBets, listPublicBets } = require("../controllers/betController");
 
 const router = express.Router();
 
-router.post("/", authMiddleware, createBet);
+// order matters: authenticate first, then check verification, then run the controller.
+router.post("/", authMiddleware, requireVerifiedEmail, createBet);
 
 // Static paths like /mine and /public must stay registered above any future /:id route,
 // otherwise Express would match "mine" or "public" as an id.
+// Viewing Bets only requires login; the spec requires verification for creating and joining.
 router.get("/mine", authMiddleware, listMyBets);
 router.get("/public", authMiddleware, listPublicBets);
 
