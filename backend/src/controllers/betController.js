@@ -3,6 +3,7 @@ const {
     isValidResolutionMethod,
     isValidStakeType,
     BET_STAKE_TYPE,
+    BET_VISIBILITY,
 } = require("../models/betModel");
 const betService = require("../services/betService");
 
@@ -164,4 +165,30 @@ async function listPublicBets(req, res) {
     }
 }
 
-module.exports = { createBet, validateCreateBetBody, listMyBets, listPublicBets};
+// GET /api/bets/:id - requires authMiddleware to have already run and populated req.user.
+// A private bet looked up by anyone other than its creator returns the same 404
+// as a missing bet, so the response never reveals that a private bet exists.
+// (creatorDisplayName is resolved in betService.getBetById, alongside the Firestore read.)
+async function getBetById(req, res) {
+    try {
+        const bet = await betService.getBetById(req.params.id);
+
+        if (!bet) {
+            return res.status(404).json({ error: "not_found" });
+        }
+
+        if (bet.visibility === BET_VISIBILITY.PRIVATE && bet.creatorUid !== req.user.uid) {
+            return res.status(404).json({ error: "not_found" });
+        }
+
+        return res.status(200).json({ bet });
+    } catch (error) {
+        console.error("[betController] Failed to load bet: ", error);
+        return res.status(500).json({
+            error: "server_error",
+            message: "Unable to load bet.",
+        });
+    }
+}
+
+module.exports = { createBet, validateCreateBetBody, listMyBets, listPublicBets, getBetById };

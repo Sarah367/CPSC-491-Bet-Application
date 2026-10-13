@@ -1,0 +1,77 @@
+.bet-details-page {
+    min-height: 100svh;
+    background: var(--bg);
+}
+
+.bet-details-main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.bet-details-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 20px 8px;
+}
+
+.bet-details-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 12px;
+}
+
+.bet-details-list {
+    margin: 0;
+}
+
+/* One label/value pair per row, separated by a thin line. */
+.bet-details-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.bet-details-row:last-child {
+    border-bottom: none;
+}
+
+.bet-details-row dt {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.bet-details-row dd {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+.bet-details-back {
+    margin: 20px 0 0;
+}
+
+@media (min-width: 600px) {
+    .bet-details-card {
+        padding: 24px 24px 8px;
+    }
+
+    .bet-details-row {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .bet-details-row dt {
+        flex: 0 0 160px;
+    }
+
+    .bet-details-row dd {
+        flex: 1;
+    }
+}
