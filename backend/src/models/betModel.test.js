@@ -1,5 +1,9 @@
 const {
     BET_COLLECTION,
+    BET_SIDE,
+    BET_PARTICIPANTS_SUBCOLLECTION,
+    BET_PARTICIPANT_ROLE,
+    VALID_BET_SIDE_VALUES,
     BET_VISIBILITY,
     BET_RESOLUTION_METHOD,
     BET_STATUS,
@@ -8,6 +12,7 @@ const {
     isValidResolutionMethod,
     isValidStatus,
     isValidStakeType,
+    isValidBetSide,
 } = require("./betModel");
 
 describe("betModel", () => {
@@ -64,6 +69,35 @@ describe("betModel", () => {
         it("rejects an invalid stake type", () => {
             expect(isValidStakeType("crypto")).toBe(false);
             expect(isValidStakeType(undefined)).toBe(false);
+        });
+    });
+
+        describe("isValidBetSide", () => {
+        it("accepts A and B", () => {
+            expect(isValidBetSide(BET_SIDE.A)).toBe(true);
+            expect(isValidBetSide(BET_SIDE.B)).toBe(true);
+        });
+
+        it("rejects any other side value", () => {
+            expect(isValidBetSide("C")).toBe(false);
+            expect(isValidBetSide("a")).toBe(false);
+            expect(isValidBetSide("Dodgers win")).toBe(false);
+            expect(isValidBetSide(undefined)).toBe(false);
+        });
+
+        it("derives VALID_BET_SIDE_VALUES from the BET_SIDE enum", () => {
+            expect(VALID_BET_SIDE_VALUES).toEqual(["A", "B"]);
+        });
+    });
+
+    describe("participants", () => {
+        it("defines the participants subcollection name", () => {
+            expect(BET_PARTICIPANTS_SUBCOLLECTION).toBe("participants");
+        });
+
+        it("defines creator and participant roles", () => {
+            expect(BET_PARTICIPANT_ROLE.CREATOR).toBe("creator");
+            expect(BET_PARTICIPANT_ROLE.PARTICIPANT).toBe("participant");
         });
     });
 });

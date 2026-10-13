@@ -1,5 +1,7 @@
 const BET_COLLECTION = "bets";
 
+const BET_PARTICIPANTS_SUBCOLLECTION = "participants";
+
 const BET_VISIBILITY = Object.freeze({
     PUBLIC: "public",
     PRIVATE: "private",
@@ -23,10 +25,21 @@ const BET_STAKE_TYPE = Object.freeze({
     NON_MONETARY: "nonMonetary",
 });
 
+const BET_SIDE = Object.freeze({
+    A: "A",
+    B: "B",
+});
+
+const BET_PARTICIPANT_ROLE = Object.freeze({
+    CREATOR: "creator",
+    PARTICIPANT: "participant"
+});
+
 const VALID_VISIBILITY_VALUES = Object.values(BET_VISIBILITY);
 const VALID_RESOLUTION_METHOD_VALUES = Object.values(BET_RESOLUTION_METHOD);
 const VALID_STATUS_VALUES = Object.values(BET_STATUS);
 const VALID_STAKE_TYPE_VALUES = Object.values(BET_STAKE_TYPE);
+const VALID_BET_SIDE_VALUES = Object.values(BET_SIDE);
 
 function isValidVisibility(value) {
     return VALID_VISIBILITY_VALUES.includes(value);
@@ -44,18 +57,27 @@ function isValidStakeType(value) {
     return VALID_STAKE_TYPE_VALUES.includes(value);
 }
 
+function isValidBetSide(value) {
+    return VALID_BET_SIDE_VALUES.includes(value);
+}
+
 module.exports = {
     BET_COLLECTION,
+    BET_PARTICIPANTS_SUBCOLLECTION,
     BET_VISIBILITY,
     BET_RESOLUTION_METHOD,
     BET_STATUS,
     BET_STAKE_TYPE,
+    BET_SIDE,
+    BET_PARTICIPANT_ROLE,
     VALID_VISIBILITY_VALUES,
     VALID_RESOLUTION_METHOD_VALUES,
     VALID_STATUS_VALUES,
     VALID_STAKE_TYPE_VALUES,
+    VALID_BET_SIDE_VALUES,
     isValidVisibility,
     isValidResolutionMethod,
     isValidStatus,
     isValidStakeType,
+    isValidBetSide,
 };

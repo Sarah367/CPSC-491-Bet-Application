@@ -43,6 +43,7 @@ describe("getBetsByCreator", () => {
         const older = new Date("2026-09-01T10:00:00.000Z");
         const newer = new Date("2026-09-20T10:00:00.000Z");
         const deadline = new Date("2026-10-01T00:00:00.000Z");
+        const outcomeDeadline = new Date("2026-10-02T00:00:00.000Z");
 
         mockGet.mockResolvedValue({
             docs: [
@@ -51,12 +52,14 @@ describe("getBetsByCreator", () => {
                     creatorUid: "user-a",
                     createdAt: Timestamp.fromDate(older),
                     deadline: Timestamp.fromDate(deadline),
+                    outcomeDeadline: Timestamp.fromDate(outcomeDeadline),
                 }),
                 fakeDoc("newer-bet", {
                     title: "Newer",
                     creatorUid: "user-a",
                     createdAt: Timestamp.fromDate(newer),
                     deadline: Timestamp.fromDate(deadline),
+                    outcomeDeadline: Timestamp.fromDate(outcomeDeadline),
                 }),
             ],
         });
@@ -70,6 +73,7 @@ describe("getBetsByCreator", () => {
             creatorUid: "user-a",
             createdAt: newer.toISOString(),
             deadline: deadline.toISOString(),
+            outcomeDeadline: outcomeDeadline.toISOString(),
         });
     });
 });
