@@ -62,7 +62,15 @@ describe("betService.createBet", () => {
         mockBetCollectionDoc.mockReturnValue(betRef);
         mockParticipantDoc.mockReturnValue(participantRef);
         mockBatchCommit.mockResolvedValue(undefined);
-        mockBetGet.mockResolvedValue({ data: () => ({ title: "Will the Dodgers win on Friday?" }) });
+        mockBetGet.mockResolvedValue({
+            id: "generated-bet-id",
+            data: () => ({
+                title: "Will the Dodgers win on Friday?",
+                createdAt: Timestamp.fromDate(new Date("2026-10-01T12:00:00.000Z")),
+                deadline: Timestamp.fromDate(deadline),
+                outcomeDeadline: Timestamp.fromDate(outcomeDeadline),
+            }),
+        });
     });
 
     it("writes the Bet and the creator's participant record in a single batch", async () => {
@@ -138,11 +146,17 @@ describe("betService.createBet", () => {
         expect(bet).not.toHaveProperty("currency");
     });
 
-    it("returns the saved Bet with its generated id after the batch commits", async () => {
+    it("returns the saved Bet with its generated id and ISO timestamps after the batch commits", async () => {
         const result = await createBet(validInput());
 
         expect(mockBetGet).toHaveBeenCalledTimes(1);
-        expect(result).toEqual({ id: "generated-bet-id", title: "Will the Dodgers win on Friday?" });
+        expect(result).toEqual({
+            id: "generated-bet-id",
+            title: "Will the Dodgers win on Friday?",
+            createdAt: "2026-10-01T12:00:00.000Z",
+            deadline: "2026-11-01T18:00:00.000Z",
+            outcomeDeadline: "2026-11-02T18:00:00.000Z",
+        });
     });
 
     it("propagates a failed commit and does not re-read the Bet", async () => {

@@ -69,7 +69,7 @@ async function createBet({
     // re-read document to get the actual stored value. 
     const savedDoc = await betRef.get();
 
-    return { id: betRef.id, ...savedDoc.data()};
+    return serializeBetDoc(savedDoc);
 }
 
 
@@ -86,6 +86,7 @@ function serializeBetDoc(doc) {
         ...data,
         createdAt: timestampToIso(data.createdAt),
         deadline: timestampToIso(data.deadline),
+        outcomeDeadline: timestampToIso(data.outcomeDeadline),
     };
 }
  

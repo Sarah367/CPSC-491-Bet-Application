@@ -318,6 +318,32 @@ describe("CreateBetPage form", () => {
         expect(apiPost).not.toHaveBeenCalled();
     });
 
+    it("clears the duplicate-outcome error when Outcome A is edited", async () => {
+        renderAtCreateBet();
+        fillBetDetails({ outcomeA: "Yes", outcomeB: "YES" });
+        chooseNonMonetaryStake();
+        submit();
+        await screen.findByText("Outcome B must be different from Outcome A.");
+
+        fireEvent.change(screen.getByLabelText("Outcome A"), { target: { value: "No" } });
+
+        expect(screen.queryByText("Outcome B must be different from Outcome A.")).not.toBeInTheDocument();
+    });
+
+    it("clears the outcome deadline error when the participation deadline is edited", async () => {
+        renderAtCreateBet();
+        fillBetDetails({ deadline: dayAfterTomorrow, outcomeDeadline: tomorrow });
+        chooseNonMonetaryStake();
+        submit();
+        await screen.findByText("Outcome deadline must be after the participation deadline.");
+
+        fireEvent.change(screen.getByLabelText("Participation Deadline"), { target: { value: tomorrow } });
+
+        expect(
+            screen.queryByText("Outcome deadline must be after the participation deadline.")
+        ).not.toBeInTheDocument();
+    });
+
     it("rejects an outcome deadline before the participation deadline", async () => {
         renderAtCreateBet();
         fillBetDetails({ deadline: dayAfterTomorrow, outcomeDeadline: tomorrow });

@@ -123,10 +123,16 @@ function CreateBetPage() {
             return next;
         });
 
+        // Cross-field errors live on the dependent field, so editing either
+        // side of the comparison clears them.
+        const clearedFields = [name];
+        if (name === "outcomeA") clearedFields.push("outcomeB");
+        if (name === "deadline") clearedFields.push("outcomeDeadline");
+
         setErrors((prev) => {
-            if (!prev[name]) return prev;
+            if (!clearedFields.some((field) => prev[field])) return prev;
             const next = { ...prev };
-            delete next[name];
+            clearedFields.forEach((field) => delete next[field]);
             return next;
         });
     }
