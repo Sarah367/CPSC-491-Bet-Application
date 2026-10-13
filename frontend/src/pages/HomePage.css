@@ -12,6 +12,23 @@
     border-bottom: 1px solid var(--border);
 }
 
+.home-create-bet {
+    display: inline-block;
+    margin-top: 24px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+}
+ 
+.home-create-bet:hover {
+    opacity: 0.9;
+}
+
 .home-header .wordmark {
     font-size: 20px;
 }
@@ -75,6 +92,94 @@
 .home-main > p {
     margin-top: 8px;
     font-size: 15px;
+}
+
+.home-recent {
+    margin-top: 40px;
+}
+ 
+.home-recent-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+ 
+.home-recent-header h2 {
+    font-size: 18px;
+}
+ 
+.home-view-all {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    white-space: nowrap;
+}
+ 
+.home-view-all:hover {
+    text-decoration: underline;
+}
+ 
+.home-recent-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+ 
+.home-recent-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+}
+ 
+.home-recent-item h3 {
+    font-size: 16px;
+    overflow-wrap: anywhere;
+}
+ 
+.home-recent-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+ 
+.home-recent-status,
+.home-recent-visibility {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 10px;
+    text-transform: capitalize;
+}
+ 
+.home-recent-status {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+ 
+.home-recent-message {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 20px 18px;
+    font-size: 15px;
+    color: var(--text-muted);
+}
+ 
+.home-recent-error {
+    border-style: solid;
+    border-color: var(--danger);
+    background: var(--danger-bg);
+    color: var(--danger);
 }
 
 .home-alert {
