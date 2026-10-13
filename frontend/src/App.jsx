@@ -7,6 +7,7 @@ import MyBetsPage from './pages/MyBetsPage';
 import BetsListPage from './pages/BetsListPage';
 import CreateBetPage from './pages/CreateBetPage';
 import './App.css'
+import VerifyEmailPage from './pages/VerifyEmailPage';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/my-bets" element={<MyBetsPage/>}/>
         <Route path="/bets" element={<BetsListPage/>}/>
         <Route path="/bets/create" element={<CreateBetPage/>}/>
+        <Route path="/verify-email" element={<VerifyEmailPage/>}/>
       </Routes>
     </BrowserRouter>
   );
