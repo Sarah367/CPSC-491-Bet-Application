@@ -13,6 +13,8 @@ const mockBetRef = {
     collection: () => ({doc: () => mockParticipantRef}),
     // returns whatever the service wrote to the Bet document
     get: async () => ({
+        // A real DocumentSnapshot has the document's id, and createBet uses it in its response.
+        id: "generated-bet-id",
         data: () => mockBatchSet.mock.calls.find(([ref]) => ref === mockBetRef)?.[1],
     }),
 };
