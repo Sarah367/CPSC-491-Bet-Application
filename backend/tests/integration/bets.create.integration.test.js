@@ -310,6 +310,40 @@ describe("POST /api/bets (Create Bet Integration)", () => {
         });
     });
 
+    describe("malformed or non-object request bodies (400)", () => {
+        // express.json() rejects bad JSON before any route runs, so Express's default error handler
+        // answers with an HTML page instead of our JSON error shape. Only the status and the
+        // "nothing was written" guarantee are asserted here. See "Known gaps" in README.md.
+        it("returns 400 for malformed JSON and never reaches authentication or Firestore", async () => {
+            const res = await request(app)
+                .post("/api/bets")
+                .set("Authorization", "Bearer valid-token")
+                .set("Content-Type", "application/json")
+                .send("{\"title\":");
+
+            expect(res.status).toBe(400);
+            expect(auth.verifyIdToken).not.toHaveBeenCalled();
+            expect(mockBatchSet).not.toHaveBeenCalled();
+            expect(mockBatchCommit).not.toHaveBeenCalled();
+        });
+
+        it("returns 400 invalid_request when the JSON body is an array", async () => {
+            const res = await postBet([validMonetaryBody()]);
+
+            expectBadRequest(res, /title/);
+        });
+
+        it("returns 400 invalid_request when the body is not JSON (text/plain)", async () => {
+            const res = await request(app)
+                .post("/api/bets")
+                .set("Authorization", "Bearer valid-token")
+                .set("Content-Type", "text/plain")
+                .send(JSON.stringify(validMonetaryBody()));
+
+            expectBadRequest(res, /title/);
+        });
+    });
+
     describe("duplicate outcomes (400)", () => {
         it.each([
             ["identical", "Yes", "Yes"],
