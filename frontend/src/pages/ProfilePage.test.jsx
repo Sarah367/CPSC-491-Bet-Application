@@ -101,6 +101,7 @@ describe("ProfilePage", () => {
 
         expect(screen.getByText(/test@example.com/)).toBeInTheDocument();
         expect(screen.getByText("Yes")).toBeInTheDocument();
+        expect(screen.queryByRole("link", {name: "Verify Email"})).not.toBeInTheDocument();
     });
 
     it("shows 'No' for an unverified email", () => {
@@ -116,6 +117,7 @@ describe("ProfilePage", () => {
         });
         renderProfilePage();
         expect(screen.getByText("No")).toBeInTheDocument();
+        expect(screen.getByRole("link", {name: "Verify Email"})).toHaveAttribute("href", "/verify-email");
     });
 
     it("falls back to 'Not set' and 'Not available' when optional fields are missing", () => {

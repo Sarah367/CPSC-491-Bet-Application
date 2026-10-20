@@ -1,14 +1,20 @@
 export const FIXED_CURRENCY = "USD";
+export const BET_SIDES = ["A", "B"];
 
 export const INITIAL_FORM_DATA = {
     title: "",
     description: "",
+    outcomeA: "",
+    outcomeB: "",
     deadline: "",
+    outcomeDeadline: "",
     visibility: "public",
     resolutionMethod: "",
     stakeType: "",
     stakeAmount: "",
     stakeDescription: "",
+    creatorSide: "",
+    termsAcknowledged: false,
 };
 
 const AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/;
@@ -26,6 +32,15 @@ function isBlank(value) {
     return value.trim().length === 0;
 }
 
+function normalizeOutcome(value) {
+    return value.trim().toLowerCase();
+}
+
+function parseDate(value) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function validateCreateBetForm(formData, now = new Date()) {
     const errors = {};
 
@@ -36,14 +51,40 @@ export function validateCreateBetForm(formData, now = new Date()) {
     if (isBlank(formData.description)) {
         errors.description = "Description is required.";
     } 
+
+    if (isBlank(formData.outcomeA)) {
+        errors.outcomeA = "Outcome A is required.";
+    }
+
+    if (isBlank(formData.outcomeB)) {
+        errors.outcomeB = "Outcome B is required.";
+    } else if (
+        !errors.outcomeA && 
+        normalizeOutcome(formData.outcomeA) === normalizeOutcome(formData.outcomeB)
+    ) {
+        errors.outcomeB = "Outcome B must be different from Outcome A.";
+    }
+
+    let deadline = null;
     if (isBlank(formData.deadline)) {
-        errors.deadline = "Deadline is required.";
+        errors.deadline = "Participation deadline is required.";
     } else {
-        const deadline = new Date(formData.deadline);
-        if (Number.isNaN(deadline.getTime())) {
-            errors.deadline = "Deadline must be a valid date.";
+        deadline = parseDate(formData.deadline);
+        if (!deadline) {
+            errors.deadline = "Participation deadline must be a valid date.";
         } else if (deadline.getTime() <= now.getTime()) {
-            errors.deadline = "Deadline must be in the future.";
+            errors.deadline = "Participation deadline must be in the future.";
+        }
+    }
+
+    if (isBlank(formData.outcomeDeadline)) {
+        errors.outcomeDeadline = "Outcome deadline is required.";
+    } else {
+        const outcomeDeadline = parseDate(formData.outcomeDeadline);
+        if (!outcomeDeadline) {
+            errors.outcomeDeadline = "Outcome deadline must be a valid date.";
+        } else if (deadline && outcomeDeadline.getTime() <= deadline.getTime()) {
+            errors.outcomeDeadline = "Outcome deadline must be after the participation deadline.";
         }
     }
 
@@ -73,6 +114,13 @@ export function validateCreateBetForm(formData, now = new Date()) {
     } else {
         errors.stakeType = "Choose a stake type.";
     }
+
+    if (!BET_SIDES.includes(formData.creatorSide)) {
+        errors.creatorSide = "Choose which side you're taking.";
+    } 
+    if (formData.termsAcknowledged !== true) {
+        errors.termsAcknowledged = "You must acknowledge the bet terms to create a bet.";
+    }
     return errors;
 
 }
@@ -81,10 +129,15 @@ export function buildCreateBetPayload(formData) {
     const payload = {
         title: formData.title.trim(),
         description: formData.description.trim(),
+        outcomeA: formData.outcomeA.trim(),
+        outcomeB: formData.outcomeB.trim(),
         deadline: new Date(formData.deadline).toISOString(),
+        outcomeDeadline: new Date(formData.outcomeDeadline).toISOString(),
         visibility: formData.visibility,
         resolutionMethod: formData.resolutionMethod,
         stakeType: formData.stakeType,
+        creatorSide: formData.creatorSide,
+        termsAcknowledged: formData.termsAcknowledged === true,
     };
 
     if (formData.stakeType === "monetary") {

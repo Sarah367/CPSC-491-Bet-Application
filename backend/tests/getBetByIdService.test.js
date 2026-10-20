@@ -48,6 +48,7 @@ describe("getBetById service", () => {
                 resolutionMethod: "external",
                 status: "active",
                 deadline: Timestamp.fromDate(new Date("2026-07-01T00:00:00.000Z")),
+                outcomeDeadline: Timestamp.fromDate(new Date("2026-07-02T00:00:00.000Z")),
                 createdAt: Timestamp.fromDate(new Date("2026-01-01T00:00:00.000Z")),
             })
         );
@@ -64,6 +65,7 @@ describe("getBetById service", () => {
             resolutionMethod: "external",
             status: "active",
             deadline: "2026-07-01T00:00:00.000Z",
+            outcomeDeadline: "2026-07-02T00:00:00.000Z",
             createdAt: "2026-01-01T00:00:00.000Z",
             creatorDisplayName: "Jordan Rivera",
         });
