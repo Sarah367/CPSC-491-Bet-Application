@@ -77,6 +77,15 @@ describe("joinBet controller", () => {
         });
     });
 
+    it("ignores a status sent in the body, since only the server sets it", async () => {
+        betService.joinBet.mockResolvedValue({ id: "bet-1" });
+ 
+        await joinBet(joinReq({ side: "B", termsAcknowledged: true, status: "active" }), res);
+ 
+        // The service only ever receives the Bet id, the token's uid, and the side.
+        expect(betService.joinBet).toHaveBeenCalledWith("bet-1", "joiner-uid", "B");
+    });
+
     it("ignores a spoofed uid in the body", async () => {
         betService.joinBet.mockResolvedValue({ id: "bet-1" });
 

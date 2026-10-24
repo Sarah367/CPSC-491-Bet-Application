@@ -8,6 +8,7 @@ const {
     BET_SIDE,
     BET_PARTICIPANT_ROLE,
     BET_VISIBILITY,
+    shouldActivateBet,
 } = require("../models/betModel");
 const { BetJoinError, JOIN_ERROR } = require("../errors/betJoinError");
 async function createBet({
@@ -173,7 +174,8 @@ const JOINABLE_STATUSES = [BET_STATUS.DRAFT, BET_STATUS.ACTIVE];
 // transaction, so two quick requests can't create two participant records or wrong counts.
 // Firestore requires every read in a transaction to happen before any write.
 // The uid always comes from the verified token (the controller passes req.user.uid).
-// This does not change the Bet's status; auto-activation is SCRUM-55.
+// If this join gives the Bet people on both sides, it also moves a Draft to Active
+// (SCRUM-55), in the same transaction, so the join and the activation happen together.
 async function joinBet(betId, uid, side) {
     const betRef = db.collection(BET_COLLECTION).doc(betId);
     const participantRef = betRef.collection(BET_PARTICIPANTS_SUBCOLLECTION).doc(uid);
@@ -217,11 +219,24 @@ async function joinBet(betId, uid, side) {
             joinedAt: FieldValue.serverTimestamp(),
         });
  
-        transaction.update(betRef, {
+        const updates = {
             participantUids: FieldValue.arrayUnion(uid),
             participantCount: FieldValue.increment(1),
             [side === BET_SIDE.A ? "sideACount" : "sideBCount"]: FieldValue.increment(1),
+        };
+
+        const shouldActivate = shouldActivateBet({
+            status: bet.status,
+            participantCount: bet.participantCount + 1,
+            sideACount: bet.sideACount + (side === BET_SIDE.A ? 1 : 0),
+            sideBCount: bet.sideBCount + (side === BET_SIDE.B ? 1 : 0),
         });
+
+        if (shouldActivate) {
+            updates.status = BET_STATUS.ACTIVE;
+        }
+
+        transaction.update(betRef, updates);
     });
  
     return getBetById(betId);
