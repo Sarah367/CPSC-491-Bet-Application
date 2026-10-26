@@ -27,6 +27,20 @@ Both the backend and frontend jobs end with `npm audit --audit-level=high`, whic
 
 **Heads up:** the audit checks the *current* advisory database, so a commit that passed yesterday can fail today if a new vulnerability is published, even though no code changed. That's expected, not a CI bug.
 
+## Daily security audit
+
+`security-audit.yml` runs the same `npm audit --audit-level=high` check on main once a day at 15:00 UTC (8:00 AM Pacific during daylight time, 7:00 AM otherwise), for both `backend` and `frontend`. It only reads `package-lock.json`, so it doesn't install packages and finishes in a few seconds.
+
+**Why it exists:** new advisories are published all the time, so main can become "vulnerable" overnight without any code changing. Before this workflow, we only found out when the next PR's CI failed, and by then every open PR was failing at once. The daily run shows the problem on its own, so someone can start a fix PR right away.
+
+**What it doesn't do:** it doesn't run on pull requests and never blocks a merge. The audit inside `ci.yml` is still what checks PRs.
+
+**How it fits with Dependabot:** Dependabot security updates open fix PRs automatically when a patched version exists. The daily audit catches the rest, like advisories with no patch yet, or ones Dependabot hasn't opened a PR for.
+
+**Running it by hand:** go to the **Actions** tab, click **Daily Security Audit**, then **Run workflow**. GitHub only shows this button, and only runs the schedule, once the workflow file is on main.
+
+**If it fails:** follow the "Audit failure" steps under Common failures below, through a normal PR from main.
+
 ## Where to see results
 
 - On a PR: scroll to the checks section at the bottom, or the ✅/❌ next to the latest commit
