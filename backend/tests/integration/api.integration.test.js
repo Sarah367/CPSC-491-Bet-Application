@@ -81,4 +81,16 @@ describe("API integration", () => {
             expect(res.status).toBe(404);
         });
     });
+
+    describe("malformed JSON requests", () => {
+        it("returns 400 before authentication when the request body is invalid JSON", async () => {
+            const res = await request(app)
+                .post("/api/bets")
+                .set("Content-Type", "application/json")
+                .send('{"title":');
+
+            expect(res.status).toBe(400);
+            expect(auth.verifyIdToken).not.toHaveBeenCalled();
+        });
+    });
 });
