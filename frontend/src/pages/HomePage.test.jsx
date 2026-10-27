@@ -107,4 +107,39 @@ describe("HomePage logout", () => {
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
   });
+
+
+});
+
+describe("HomePage Create Bet navigation", () => {
+  beforeEach(() => {
+      vi.clearAllMocks();
+      useAuth.mockReturnValue({
+          currentUser: {uid: "abc123", email: "test@example.com"},
+          loading: false,
+          isAuthenticated: true,
+      });
+  });
+
+  it("shows a Create a Bet link that points to /bets/create", () => {
+      renderHomePage();
+
+      const link = screen.getByRole("link", { name: "Create a Bet" });
+      expect(link).toHaveAttribute("href", "/bets/create");
+  });
+
+  it("opens the Create Bet page when the link is clicked", () => {
+      render(
+          <MemoryRouter initialEntries={["/home"]}>
+              <Routes>
+                  <Route path="/home" element={<HomePage />} />
+                  <Route path="/bets/create" element={<p>Create Bet Page</p>} />
+              </Routes>
+          </MemoryRouter>
+      );
+
+      fireEvent.click(screen.getByRole("link", { name: "Create a Bet" }));
+
+      expect(screen.getByText("Create Bet Page")).toBeInTheDocument();
+  });
 });
