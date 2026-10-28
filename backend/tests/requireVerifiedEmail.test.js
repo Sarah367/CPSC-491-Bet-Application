@@ -118,3 +118,20 @@ describe("bet routes middleware order", () => {
         ]);
     });
 });
+
+it("runs authMiddleware, then requireVerifiedEmail, then joinBet on POST /:id/join", () => {
+    const betRoutes = require("../src/routes/betRoutes");
+    const authMiddleware = require("../src/middleware/authMiddleware");
+    const { joinBet } = require("../src/controllers/betController");
+
+    const joinLayer = betRoutes.stack.find(
+        (layer) => layer.route?.path === "/:id/join" && layer.route.methods.post
+    );
+
+    expect(joinLayer).toBeDefined();
+    expect(joinLayer.route.stack.map((layer) => layer.handle)).toEqual([
+        authMiddleware,
+        requireVerifiedEmail,
+        joinBet,
+    ]);
+});
