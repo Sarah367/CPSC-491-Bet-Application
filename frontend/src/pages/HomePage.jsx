@@ -37,6 +37,7 @@ function HomePage() {
                     <Link to="/bets" className="home-profile-link">Browse Public Bets</Link>
                     <Link to="/my-bets" className="home-profile-link">My Bets</Link>
                     <Link to="/profile" className="home-profile-link">View Profile</Link>
+                    
                     <button className="home-logout" onClick={handleLogout}>Log Out</button>
                 </div>
             </header>
@@ -44,6 +45,7 @@ function HomePage() {
             <main className="home-main">
                 <h1>Bet Home</h1>
                 <p>Your bets will show up here soon.</p>
+                <Link to="/bets/create" className="home-create-bet">Create a Bet</Link>
             </main>
         </div>
     );
