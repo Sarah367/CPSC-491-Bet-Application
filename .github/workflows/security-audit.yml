@@ -1,0 +1,51 @@
+name: Daily Security Audit
+
+# Runs the same high/critical npm audit as the CI workflow, but once a day on main,
+# so newly published advisories are noticed even when nobody opens a PR (SCRUM-90).
+# It only reports findings. It doesn't run on pull requests, so it never blocks a merge.
+on:
+  schedule:
+    # Every day at 15:00 UTC (8:00 AM Pacific during daylight time, 7:00 AM otherwise).
+    - cron: "0 15 * * *"
+  # Adds a "Run workflow" button on the Actions tab, so it can also be run by hand.
+  workflow_dispatch:
+
+# The audit only needs to read the code.
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: npm audit (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      # Audit both folders even if one of them fails.
+      fail-fast: false
+      matrix:
+        project: [backend, frontend]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # npm audit reads package-lock.json directly, so there's no need to install
+      # the packages first. A high or critical finding fails this run.
+      - name: Audit dependencies (high/critical)
+        run: npm audit --audit-level=high
+
+      - name: Add a summary to the run page
+        if: ${{ !cancelled() }}
+        run: |
+          {
+            echo "### ${{ matrix.project }}: npm audit"
+            echo
+            echo "Result: **${{ job.status }}**"
+            echo
+            echo "If this failed, see \"Daily security audit\" in .github/workflows/README.md for what to do."
+          } >> "$GITHUB_STEP_SUMMARY"
