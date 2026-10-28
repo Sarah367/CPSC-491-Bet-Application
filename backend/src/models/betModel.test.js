@@ -16,6 +16,7 @@ const {
     isValidStakeType,
     isValidBetSide,
     isValidCurrency,
+    shouldActivateBet,
 } = require("./betModel");
 
 describe("betModel", () => {
@@ -118,6 +119,42 @@ describe("betModel", () => {
         it("defines creator and participant roles", () => {
             expect(BET_PARTICIPANT_ROLE.CREATOR).toBe("creator");
             expect(BET_PARTICIPANT_ROLE.PARTICIPANT).toBe("participant");
+        });
+    });
+
+    describe("shouldActivateBet", () => {
+        function counts(overrides = {}) {
+            return { status: "draft", participantCount: 2, sideACount: 1, sideBCount: 1, ...overrides };
+        }
+
+        it("activates a Draft with two people, one on each side", () => {
+            expect(shouldActivateBet(counts())).toBe(true);
+        });
+
+        it("activates a Draft with more people once both sides have someone", () => {
+            expect(shouldActivateBet(counts({ participantCount: 3, sideACount: 2, sideBCount: 1 }))).toBe(true);
+        });
+
+        it("doesn't activate with only the creator", () => {
+            expect(shouldActivateBet(counts({ participantCount: 1, sideACount: 1, sideBCount: 0 }))).toBe(false);
+        });
+
+        it.each([
+            ["everyone on side A", { sideACount: 2, sideBCount: 0 }],
+            ["everyone on side B", { sideACount: 0, sideBCount: 2 }],
+        ])("doesn't activate with %s", (_label, overrides) => {
+            expect(shouldActivateBet(counts(overrides))).toBe(false);
+        });
+
+        it.each(["active", "locked", "resolved", "archived"])(
+            "doesn't activate a Bet that is already %s",
+            (status) => {
+                expect(shouldActivateBet(counts({ status }))).toBe(false);
+            }
+        );
+
+        it("doesn't activate when the counts are missing (old test data)", () => {
+            expect(shouldActivateBet({ status: "draft", participantCount: NaN, sideACount: NaN, sideBCount: 1 })).toBe(false);
         });
     });
 });

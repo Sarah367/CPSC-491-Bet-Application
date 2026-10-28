@@ -66,6 +66,17 @@ function isValidBetSide(value) {
     return VALID_BET_SIDE_VALUES.includes(value);
 }
 
+// draft becomes active once at least two people are in it, with at least one on each side. 
+// It takes the Bet's counts after a join.
+function shouldActivateBet({status, participantCount, sideACount, sideBCount}) {
+    return (
+        status === BET_STATUS.DRAFT && 
+        participantCount >= 2 &&
+        sideACount >= 1 &&
+        sideBCount >= 1
+    );
+}
+
 function isValidCurrency(value) {
     return VALID_CURRENCY_VALUES.includes(value);
 }
@@ -92,4 +103,5 @@ module.exports = {
     isValidStakeType,
     isValidBetSide,
     isValidCurrency,
+    shouldActivateBet,
 };
