@@ -27,6 +27,24 @@ Both the backend and frontend jobs end with `npm audit --audit-level=high`, whic
 
 **Heads up:** the audit checks the *current* advisory database, so a commit that passed yesterday can fail today if a new vulnerability is published, even though no code changed. That's expected, not a CI bug.
 
+### Dependabot: version updates vs. security updates
+
+Dependabot runs in two separate ways in this repo:
+
+- **Version updates** are configured in `.github/dependabot.yml` (SCRUM-49). Once a week, Dependabot opens grouped PRs that bump minor and patch versions in `backend/` and `frontend/`. This is routine maintenance.
+- **Security updates** are enabled in the repo's **Settings → Code security** (SCRUM-75), not in `dependabot.yml`. When GitHub publishes an advisory that affects one of our dependencies **and a patched version exists**, Dependabot opens a fix PR right away instead of waiting for the weekly run.
+
+Security updates don't replace the audit gate above. When an advisory has **no patched version**, Dependabot can't open a fix PR, and `npm audit` will still fail CI. Fix those manually using the steps under **Audit failure** in [Common failures](#common-failures). If no patched version exists anywhere in the dependency chain, removing or replacing the package that pulls it in may be the only option (for example, SCRUM-60 replaced `nodemon` with `node --watch` because no patched `braces` version existed).
+
+**Handling a Dependabot security PR:**
+
+1. Read the linked advisory and the package's release notes, and check whether it's a major version bump.
+2. Wait for CI to pass (tests, lint, build, and audit).
+3. Approve and merge.
+4. Merge `main` into any open feature branches so they pick up the fix: `git fetch origin` → `git merge origin/main` → `git push`.
+
+If a Dependabot PR conflicts with `main`, comment `@dependabot rebase` on the PR instead of fixing it by hand.
+
 ## Where to see results
 
 - On a PR: scroll to the checks section at the bottom, or the ✅/❌ next to the latest commit
