@@ -12,6 +12,23 @@
     border-bottom: 1px solid var(--border);
 }
 
+.home-create-bet {
+    display: inline-block;
+    margin-top: 24px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+}
+ 
+.home-create-bet:hover {
+    opacity: 0.9;
+}
+
 .home-header .wordmark {
     font-size: 20px;
 }
