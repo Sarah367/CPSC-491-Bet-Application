@@ -1,12 +1,17 @@
 import {vi, describe, it, beforeEach, expect} from "vitest";
-import {render, screen} from "@testing-library/react";
+import {render, screen, fireEvent} from "@testing-library/react";
 import {MemoryRouter, Routes, Route} from "react-router-dom";
 import {useAuth} from "../context/useAuth";
 import {apiGet, ApiError} from "../services/apiClient";
+import {joinBet} from "../services/betService";
 import BetDetailsPage from "../pages/BetDetailsPage";
 
 vi.mock("../context/useAuth", () => ({
     useAuth: vi.fn(),
+}));
+
+vi.mock("../services/betService", () => ({
+    joinBet: vi.fn(),
 }));
 
 vi.mock("../services/apiClient", () => ({
@@ -139,5 +144,78 @@ describe("BetDetailsPage", () => {
 
         await screen.findByText("Will the Dodgers win on Friday?");
         expect(screen.getByText("Unknown")).toBeInTheDocument();
+    });
+});
+
+describe("BetDetailsPage: outcomes and joining (SCRUM-88)", () => {
+    const viewer = {loading: false, isAuthenticated: true, uid: "viewer-uid", emailVerified: true};
+ 
+    function joinableBet(overrides = {}) {
+        return fakeBet({
+            visibility: "public",
+            status: "draft",
+            creatorUid: "creator-uid",
+            outcomeA: "Rain",
+            outcomeB: "No rain",
+            participantCount: 1,
+            ...overrides,
+        });
+    }
+ 
+    beforeEach(() => {
+        vi.clearAllMocks();
+        useAuth.mockReturnValue(viewer);
+    });
+ 
+    it("shows both outcomes and the participant count", async () => {
+        apiGet.mockResolvedValue({bet: joinableBet(), viewerParticipation: null});
+ 
+        renderBetDetailsPage();
+ 
+        expect(await screen.findByText("Outcome A")).toBeInTheDocument();
+        expect(screen.getByText("Rain", {selector: "dd"})).toBeInTheDocument();
+        expect(screen.getByText("No rain", {selector: "dd"})).toBeInTheDocument();
+        expect(screen.getByText("Participants")).toBeInTheDocument();
+        expect(screen.getByText("1", {selector: "dd"})).toBeInTheDocument();
+    });
+ 
+    it("shows the side the user already joined when the page loads", async () => {
+        apiGet.mockResolvedValue({
+            bet: joinableBet({participantCount: 2}),
+            viewerParticipation: {side: "B", role: "participant"},
+        });
+ 
+        renderBetDetailsPage();
+ 
+        expect(await screen.findByText(/You joined this Bet/)).toHaveTextContent("You joined this Bet and picked No rain.");
+        expect(screen.queryByRole("button", {name: "Join Bet"})).not.toBeInTheDocument();
+    });
+ 
+    it("updates the page from the join response after joining", async () => {
+        apiGet.mockResolvedValue({bet: joinableBet(), viewerParticipation: null});
+        joinBet.mockResolvedValue({
+            message: "Joined bet successfully.",
+            bet: joinableBet({participantCount: 2}),
+            viewerParticipation: {side: "A", role: "participant"},
+        });
+ 
+        renderBetDetailsPage();
+        fireEvent.click(await screen.findByLabelText("Rain"));
+        fireEvent.click(screen.getByLabelText("I understand and agree to the terms of this Bet."));
+        fireEvent.click(screen.getByRole("button", {name: "Join Bet"}));
+ 
+        expect(await screen.findByText(/You joined this Bet/)).toHaveTextContent("You joined this Bet and picked Rain.");
+        expect(screen.getByText("2", {selector: "dd"})).toBeInTheDocument();
+        // The join response already has the updated Bet, so the page doesn't load it again.
+        expect(apiGet).toHaveBeenCalledTimes(1);
+    });
+ 
+    it("doesn't show the Join section when the Bet fails to load", async () => {
+        apiGet.mockRejectedValue(new ApiError(404, {error: "not_found"}));
+ 
+        renderBetDetailsPage();
+ 
+        expect(await screen.findByText("This bet doesn't exist.")).toBeInTheDocument();
+        expect(screen.queryByRole("button", {name: "Join Bet"})).not.toBeInTheDocument();
     });
 });

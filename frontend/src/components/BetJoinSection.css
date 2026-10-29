@@ -1,0 +1,113 @@
+/* Matches the Create Bet page's radio, checkbox, and button styles. */
+.bet-join {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 16px;
+}
+
+.bet-join-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 12px;
+}
+
+.bet-join-text,
+.bet-join-joined {
+    font-size: 15px;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.bet-join-joined strong {
+    color: var(--text);
+}
+
+.bet-join-sides {
+    border: none;
+    margin: 0 0 12px;
+    padding: 0;
+    min-width: 0;
+}
+
+.bet-join-sides > legend {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    padding: 0;
+}
+
+.bet-join-radio,
+.bet-join-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    color: var(--text);
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+
+.bet-join-radio:has(input:checked),
+.bet-join-checkbox:has(input:checked) {
+    border-color: var(--accent);
+}
+
+.bet-join-radio input,
+.bet-join-checkbox input {
+    accent-color: var(--accent);
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.bet-join-checkbox {
+    margin-bottom: 16px;
+}
+
+.bet-join-error {
+    color: var(--danger);
+    font-size: 14px;
+    margin: 0 0 12px;
+}
+
+.bet-join .bet-join-error:only-child {
+    margin: 0;
+}
+
+.bet-join-submit {
+    width: 100%;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border: none;
+    border-radius: 8px;
+    padding: 13px 16px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.bet-join-submit:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.bet-join-submit:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.bet-join-link {
+    display: inline-block;
+    margin-top: 12px;
+    font-weight: 600;
+    color: var(--accent);
+}
