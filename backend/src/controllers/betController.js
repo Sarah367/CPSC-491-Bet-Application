@@ -9,6 +9,8 @@ const {
     VALID_CURRENCY_VALUES,
 } = require("../models/betModel");
 const betService = require("../services/betService");
+const { BetJoinError, JOIN_ERROR } = require("../errors/betJoinError");
+const { serializeBetDetails } = require("../serializers/betDetailsSerializer");
 
 function sendBadRequest(res, message) {
     return res.status(400).json({error: "invalid_request", message});
@@ -230,19 +232,27 @@ async function listPublicBets(req, res) {
 // A private bet looked up by anyone other than its creator returns the same 404
 // as a missing bet, so the response never reveals that a private bet exists.
 // (creatorDisplayName is resolved in betService.getBetById, alongside the Firestore read.)
+// The same 404 for a missing Bet and for someone else's private Bet, so the response
+// never reveals that a private Bet exists.
+const BET_NOT_FOUND = Object.freeze({ error: "not_found", message: "Bet not found." });
 async function getBetById(req, res) {
     try {
         const bet = await betService.getBetById(req.params.id);
 
         if (!bet) {
-            return res.status(404).json({ error: "not_found" });
+            return res.status(404).json(BET_NOT_FOUND);
         }
 
         if (bet.visibility === BET_VISIBILITY.PRIVATE && bet.creatorUid !== req.user.uid) {
-            return res.status(404).json({ error: "not_found" });
+            return res.status(404).json(BET_NOT_FOUND);
         }
 
-        return res.status(200).json({ bet });
+        // The current user's side and role if they've joined, or null. Lets the Bet Details
+        // page show "You joined on ..." and hide the Join section, even after a refresh.
+        const viewerParticipation = await betService.getViewerParticipation(req.params.id, req.user.uid);
+ 
+        // Only the allowlisted fields are sent, so participantUids and any internal fields stay private.
+        return res.status(200).json({ bet: serializeBetDetails(bet), viewerParticipation });
     } catch (error) {
         console.error("[betController] Failed to load bet: ", error);
         return res.status(500).json({
@@ -252,4 +262,67 @@ async function getBetById(req, res) {
     }
 }
 
-module.exports = { createBet, validateCreateBetBody, listMyBets, listPublicBets, getBetById };
+// Validates the POST /api/bets/:id/join body. Values must match exactly, like Create Bet:
+// "a", "B ", "true", and 1 are all rejected.
+function validateJoinBetBody(body) {
+    if (!isValidBetSide(body.side)) {
+        return { valid: false, message: "side must be \"A\" or \"B\"." };
+    }
+ 
+    if (body.termsAcknowledged !== true) {
+        return { valid: false, message: "termsAcknowledged must be true to join a bet." };
+    }
+ 
+    return { valid: true };
+}
+
+const JOIN_ERROR_STATUS = Object.freeze({
+    [JOIN_ERROR.NOT_FOUND]: 404,
+    // 409 error means the request itself was fine, but the Bet's current state doesn't allow it.
+    [JOIN_ERROR.CREATOR]: 409,
+    [JOIN_ERROR.ALREADY_JOINED]: 409,
+    [JOIN_ERROR.CLOSED]: 409,
+});
+
+// POST /api/bets/:id/join - requires authMiddleware and requireVerifiedEmail.
+// The joining user's uid comes only from the verified token, never from the body.
+async function joinBet(req, res) {
+    const body = req.body || {};
+    const validation = validateJoinBetBody(body);
+    if (!validation.valid) {
+        return sendBadRequest(res, validation.message);
+    }
+ 
+    try {
+        const bet = await betService.joinBet(req.params.id, req.user.uid, body.side);
+ 
+        return res.status(200).json({
+            message: "Joined bet successfully.",
+            bet: serializeBetDetails(bet),
+            viewerParticipation: { side: body.side, role: "participant" },
+        });
+    } catch (error) {
+        if (error instanceof BetJoinError) {
+            return res.status(JOIN_ERROR_STATUS[error.code]).json({
+                error: error.code,
+                message: error.message,
+            });
+        }
+ 
+        console.error("[betController] Failed to join bet: ", error);
+        return res.status(500).json({
+            error: "server_error",
+            message: "Unable to join bet.",
+        });
+    }
+}
+
+module.exports = {
+    createBet,
+    validateCreateBetBody,
+    listMyBets,
+    listPublicBets,
+    getBetById,
+    joinBet,
+    validateJoinBetBody,
+};
