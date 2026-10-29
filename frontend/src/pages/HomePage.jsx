@@ -99,7 +99,14 @@ function HomePage() {
             <ul className="home-recent-list">
                 {recentBets.map((bet) => (
                     <li key={bet.id} className="home-recent-item">
-                        <h3>{bet.title}</h3>
+                        <h3>
+                            {/* The card's one real link, to this Bet's details page (SCRUM-84).
+                                Its ::after stretches over the whole card in HomePage.css, so
+                                clicking anywhere on the card opens the Bet. */}
+                            <Link to={`/bets/${bet.id}`} className="home-recent-link">
+                                {bet.title}
+                            </Link>
+                        </h3>
                         <p className="home-recent-meta">
                             <span className="home-recent-status">{bet.status}</span>
                             <span className="home-recent-visibility">{bet.visibility}</span>

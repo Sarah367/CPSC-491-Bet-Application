@@ -142,6 +142,61 @@
     font-size: 16px;
     overflow-wrap: anywhere;
 }
+
+/* SCRUM-84: the whole card opens the Bet's details page. The title is the card's one real
+   link (so keyboard and screen readers work normally), and its ::after stretches over the
+   whole card, so a click anywhere on the card follows that link. */
+.home-recent-item {
+    position: relative;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+ 
+/* The card lifts slightly on hover, to show it's clickable. */
+.home-recent-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* Keyboard users get a clear outline around the whole card. */
+.home-recent-item:has(.home-recent-link:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.home-recent-link {
+    color: inherit;
+    text-decoration: none;
+}
+ 
+/* The whole card shows it's clickable, so the title itself isn't underlined on hover. */
+.home-recent-link:hover {
+    color: inherit;
+    text-decoration: none;
+}
+ 
+.home-recent-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+}
+ 
+/* The outline is drawn around the card instead. */
+.home-recent-link:focus-visible {
+    outline: none;
+}
+
+/* No lift animation for people who've turned down motion in their system settings. */
+@media (prefers-reduced-motion: reduce) {
+    .home-recent-item {
+        transition: none;
+    }
+ 
+    .home-recent-item:hover {
+        transform: none;
+    }
+}
  
 .home-recent-meta {
     display: flex;
