@@ -77,6 +77,20 @@ describe("joinBet controller", () => {
         });
     });
 
+    it("returns the Bet in the same client-safe shape as Bet Details", async () => {
+        betService.joinBet.mockResolvedValue({
+            id: "bet-1",
+            status: "active",
+            participantCount: 2,
+            participantUids: ["creator-uid", "joiner-uid"],
+            termsAcknowledged: true,
+        });
+ 
+        await joinBet(joinReq({ side: "B", termsAcknowledged: true }), res);
+ 
+        expect(res.body.bet).toEqual({ id: "bet-1", status: "active", participantCount: 2 });
+    });
+
     it("ignores a status sent in the body, since only the server sets it", async () => {
         betService.joinBet.mockResolvedValue({ id: "bet-1" });
  

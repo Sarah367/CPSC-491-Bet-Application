@@ -251,7 +251,6 @@ describe("POST /api/bets/:id/join (join and auto-activation integration)", () =>
                     participantCount: 2,
                     sideACount: 1,
                     sideBCount: 1,
-                    participantUids: [CREATOR_UID, JOINER_UID],
                     creatorDisplayName: "Bet Creator",
                 }),
                 viewerParticipation: { side: "B", role: "participant" },
@@ -261,7 +260,10 @@ describe("POST /api/bets/:id/join (join and auto-activation integration)", () =>
             expect(mockRunTransaction).toHaveBeenCalledTimes(1);
             expect(mockTransaction.update).toHaveBeenCalledTimes(1);
             expect(mockTransaction.update.mock.calls[0][1].status).toBe("active");
-
+            // The joiner was added to the stored participant list, but that list is never sent
+            // back to the client (SCRUM-98).
+            expect(mockState.bets[BET_ID].participantUids).toEqual([CREATOR_UID, JOINER_UID]);
+            expect(res.body.bet).not.toHaveProperty("participantUids");
             // The joiner's participant record was written with the token's uid.
             expect(mockState.participants[BET_ID][JOINER_UID]).toMatchObject({
                 uid: JOINER_UID,

@@ -5,10 +5,9 @@
  *   betRoutes -> authMiddleware -> getBetById controller -> betService.getBetById
  *   (Bet read + creator display name lookup) -> betService.getViewerParticipation -> response
  *
- * These tests check the endpoint's current behavior, including two things that may change
- * later in their own tickets: the 404 body is { error: "not_found" } with no message, and the
- * Bet includes every stored field. The tests check the fields the Bet Details page relies on,
- * without locking in the extra ones.
+ * SCRUM-98 hardened this endpoint: both 404s now return { error: "not_found", message }, and
+ * the Bet only includes an explicit allowlist of fields, so participantUids and any other
+ * stored-only fields never reach the client. The "client-safe response" tests check that.
  *
  * Firebase Admin is mocked with a small in-memory Firestore. This endpoint only reads, so the
  * fake doesn't need transactions or writes.
@@ -152,7 +151,7 @@ describe("GET /api/bets/:id (Bet Details integration)", () => {
         it("converts the Firestore Timestamps to ISO strings", async () => {
             const res = await getBet();
 
-            expect(res.body.bet.createdAt).toBe(CREATED_AT.toISOString());
+            
             expect(res.body.bet.deadline).toBe(DEADLINE.toISOString());
             expect(res.body.bet.outcomeDeadline).toBe(OUTCOME_DEADLINE.toISOString());
         });
@@ -177,7 +176,7 @@ describe("GET /api/bets/:id (Bet Details integration)", () => {
             expect(res.status).toBe(404);
             // Current body. A follow-up ticket may add a message, as long as private and
             // missing Bets still return exactly the same response.
-            expect(res.body).toEqual({ error: "not_found" });
+            expect(res.body).toEqual({ error: "not_found", message: "Bet not found." });
             // The private check happens before the participant lookup.
             expect(mockParticipantGet).not.toHaveBeenCalled();
         });
@@ -186,7 +185,7 @@ describe("GET /api/bets/:id (Bet Details integration)", () => {
             const res = await getBet("missing-bet");
 
             expect(res.status).toBe(404);
-            expect(res.body).toEqual({ error: "not_found" });
+            expect(res.body).toEqual({ error: "not_found", message: "Bet not found." });
             expect(mockParticipantGet).not.toHaveBeenCalled();
         });
 
@@ -198,6 +197,61 @@ describe("GET /api/bets/:id (Bet Details integration)", () => {
 
             expect(privateRes.status).toBe(missingRes.status);
             expect(privateRes.body).toEqual(missingRes.body);
+        });
+    });
+
+    describe("client-safe response (SCRUM-98)", () => {
+        it("returns exactly the allowlisted fields for a non-monetary Bet", async () => {
+            const res = await getBet();
+ 
+            expect(Object.keys(res.body.bet).sort()).toEqual([
+                "creatorDisplayName",
+                "creatorSide",
+                "creatorUid",
+                "deadline",
+                "description",
+                "id",
+                "outcomeA",
+                "outcomeB",
+                "outcomeDeadline",
+                "participantCount",
+                "resolutionMethod",
+                "sideACount",
+                "sideBCount",
+                "stakeDescription",
+                "stakeType",
+                "status",
+                "title",
+                "visibility",
+            ]);
+        });
+ 
+        it("doesn't expose who joined, the creator's terms acknowledgment, or createdAt", async () => {
+            seedBet({ termsAcknowledged: true });
+ 
+            const res = await getBet();
+ 
+            expect(res.body.bet).not.toHaveProperty("participantUids");
+            expect(res.body.bet).not.toHaveProperty("termsAcknowledged");
+            expect(res.body.bet).not.toHaveProperty("createdAt");
+        });
+ 
+        it("never exposes a field that isn't on the allowlist, even a new one", async () => {
+            seedBet({ internalOnlyField: "should-not-leak" });
+ 
+            const res = await getBet();
+ 
+            expect(res.body.bet).not.toHaveProperty("internalOnlyField");
+            expect(JSON.stringify(res.body)).not.toMatch(/should-not-leak/);
+        });
+ 
+        it("includes the stake amount and currency for a monetary Bet", async () => {
+            seedBet({ stakeType: "monetary", stakeAmountCents: 500, currency: "USD", stakeDescription: undefined });
+ 
+            const res = await getBet();
+ 
+            expect(res.body.bet).toMatchObject({ stakeType: "monetary", stakeAmountCents: 500, currency: "USD" });
+            expect(res.body.bet).not.toHaveProperty("stakeDescription");
         });
     });
 

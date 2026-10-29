@@ -54,7 +54,9 @@ describe("getBetById controller", () => {
         await getBetById(req, res);
 
         expect(res.statusCode).toBe(200);
-        expect(res.body).toEqual({ bet: fakeBet(), viewerParticipation: null });
+        // createdAt isn't on the client-safe allowlist (SCRUM-98), so it's left out.
+        const { createdAt: _createdAt, ...expectedBet } = fakeBet();
+        expect(res.body).toEqual({ bet: expectedBet, viewerParticipation: null });
 
         expect(betService.getBetById).toHaveBeenCalledWith("bet-1");
     });
@@ -66,7 +68,7 @@ describe("getBetById controller", () => {
         await getBetById(req, res);
 
         expect(res.statusCode).toBe(404);
-        expect(res.body).toEqual({ error: "not_found" });
+        expect(res.body).toEqual({ error: "not_found", message: "Bet not found." });
     });
 
     it("returns 404 (not 403) for a private bet viewed by a non-creator, without revealing it exists", async () => {
@@ -76,7 +78,7 @@ describe("getBetById controller", () => {
         await getBetById(req, res);
 
         expect(res.statusCode).toBe(404);
-        expect(res.body).toEqual({ error: "not_found" });
+        expect(res.body).toEqual({ error: "not_found", message: "Bet not found." });
     });
 
     it("returns 200 for a private bet viewed by its own creator", async () => {
@@ -121,5 +123,33 @@ describe("getBetById controller", () => {
  
         expect(res.statusCode).toBe(404);
         expect(betService.getViewerParticipation).not.toHaveBeenCalled();
+    });
+
+
+    it("doesn't send participantUids or other stored-only fields to the client", async () => {
+        betService.getBetById.mockResolvedValue(
+            fakeBet({ participantUids: ["creator-uid", "other-uid"], internalOnlyField: "secret" })
+        );
+ 
+        const req = { params: { id: "bet-1" }, user: { uid: "viewer-uid" } };
+        await getBetById(req, res);
+ 
+        expect(res.statusCode).toBe(200);
+        expect(res.body.bet).not.toHaveProperty("participantUids");
+        expect(res.body.bet).not.toHaveProperty("internalOnlyField");
+    });
+ 
+    it("returns the same 404 body for a missing Bet and someone else's private Bet", async () => {
+        const req = { params: { id: "bet-1" }, user: { uid: "someone-else" } };
+ 
+        betService.getBetById.mockResolvedValue(null);
+        await getBetById(req, res);
+        const missingBody = res.body;
+ 
+        res = createRes();
+        betService.getBetById.mockResolvedValue(fakeBet({ visibility: "private", creatorUid: "creator-uid" }));
+        await getBetById(req, res);
+ 
+        expect(res.body).toEqual(missingBody);
     });
 });

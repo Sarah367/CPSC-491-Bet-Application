@@ -10,6 +10,7 @@ const {
 } = require("../models/betModel");
 const betService = require("../services/betService");
 const { BetJoinError, JOIN_ERROR } = require("../errors/betJoinError");
+const { serializeBetDetails } = require("../serializers/betDetailsSerializer");
 
 function sendBadRequest(res, message) {
     return res.status(400).json({error: "invalid_request", message});
@@ -231,23 +232,27 @@ async function listPublicBets(req, res) {
 // A private bet looked up by anyone other than its creator returns the same 404
 // as a missing bet, so the response never reveals that a private bet exists.
 // (creatorDisplayName is resolved in betService.getBetById, alongside the Firestore read.)
+// The same 404 for a missing Bet and for someone else's private Bet, so the response
+// never reveals that a private Bet exists.
+const BET_NOT_FOUND = Object.freeze({ error: "not_found", message: "Bet not found." });
 async function getBetById(req, res) {
     try {
         const bet = await betService.getBetById(req.params.id);
 
         if (!bet) {
-            return res.status(404).json({ error: "not_found" });
+            return res.status(404).json(BET_NOT_FOUND);
         }
 
         if (bet.visibility === BET_VISIBILITY.PRIVATE && bet.creatorUid !== req.user.uid) {
-            return res.status(404).json({ error: "not_found" });
+            return res.status(404).json(BET_NOT_FOUND);
         }
 
         // The current user's side and role if they've joined, or null. Lets the Bet Details
         // page show "You joined on ..." and hide the Join section, even after a refresh.
         const viewerParticipation = await betService.getViewerParticipation(req.params.id, req.user.uid);
  
-        return res.status(200).json({ bet, viewerParticipation });
+        // Only the allowlisted fields are sent, so participantUids and any internal fields stay private.
+        return res.status(200).json({ bet: serializeBetDetails(bet), viewerParticipation });
     } catch (error) {
         console.error("[betController] Failed to load bet: ", error);
         return res.status(500).json({
@@ -293,7 +298,7 @@ async function joinBet(req, res) {
  
         return res.status(200).json({
             message: "Joined bet successfully.",
-            bet,
+            bet: serializeBetDetails(bet),
             viewerParticipation: { side: body.side, role: "participant" },
         });
     } catch (error) {
