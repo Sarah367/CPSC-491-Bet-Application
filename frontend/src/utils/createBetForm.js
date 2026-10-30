@@ -41,7 +41,7 @@ function parseDate(value) {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export function validateCreateBetForm(formData, now = new Date()) {
+export function validateBetFormFields(formData, now = new Date()) {
     const errors = {};
 
     if (isBlank(formData.title)) {
@@ -118,14 +118,24 @@ export function validateCreateBetForm(formData, now = new Date()) {
     if (!BET_SIDES.includes(formData.creatorSide)) {
         errors.creatorSide = "Choose which side you're taking.";
     } 
-    if (formData.termsAcknowledged !== true) {
-        errors.termsAcknowledged = "You must acknowledge the bet terms to create a bet.";
-    }
+
     return errors;
 
 }
 
-export function buildCreateBetPayload(formData) {
+export function validateCreateBetForm(formData, now = new Date()) {
+    const errors = validateBetFormFields(formData, now);
+    if (formData.termsAcknowledged !== true) {
+        errors.termsAcknowledged = "You must acknowledge the bet terms to create a bet.";
+    }
+    return errors;
+}
+
+export function validateEditBetForm(formData, now = new Date()) {
+    return validateBetFormFields(formData, now);
+}
+
+function buildBetFieldsPayload(formData) {
     const payload = {
         title: formData.title.trim(),
         description: formData.description.trim(),
@@ -137,7 +147,6 @@ export function buildCreateBetPayload(formData) {
         resolutionMethod: formData.resolutionMethod,
         stakeType: formData.stakeType,
         creatorSide: formData.creatorSide,
-        termsAcknowledged: formData.termsAcknowledged === true,
     };
 
     if (formData.stakeType === "monetary") {
@@ -149,3 +158,55 @@ export function buildCreateBetPayload(formData) {
 
     return payload;
 }
+export function buildCreateBetPayload(formData) {
+    return { // runs the shared rules and then adds the terms check, so Create works exactly as before.
+        ...buildBetFieldsPayload(formData),
+        termsAcknowledged: formData.termsAcknowledged === true,
+    };
+}
+// The PATCH /api/bets/:id body. It only contains editable fields (never termsAcknowledged,
+// status, or anything else the backend rejects).
+export function buildEditBetPayload(formData) {
+    return buildBetFieldsPayload(formData);
+}
+
+// Formats an ISO date for a datetime-local input, in the user's local time ("YYYY-MM-DDTHH:mm").
+function toDateTimeLocal(isoString) {
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) {
+        return "";
+    }
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+        `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// Turns a Bet from the API into the Edit form's starting values.
+export function betToFormData(bet) {
+    const isMonetary = bet.stakeType === "monetary";
+    return {
+        ...INITIAL_FORM_DATA,
+        title: bet.title ?? "",
+        description: bet.description ?? "",
+        outcomeA: bet.outcomeA ?? "",
+        outcomeB: bet.outcomeB ?? "",
+        deadline: toDateTimeLocal(bet.deadline),
+        outcomeDeadline: toDateTimeLocal(bet.outcomeDeadline),
+        visibility: bet.visibility ?? "public",
+        resolutionMethod: bet.resolutionMethod ?? "",
+        stakeType: bet.stakeType ?? "",
+        stakeAmount: isMonetary && Number.isInteger(bet.stakeAmountCents)
+            ? (bet.stakeAmountCents / 100).toFixed(2)
+            : "",
+        stakeDescription: isMonetary ? "" : bet.stakeDescription ?? "",
+        creatorSide: bet.creatorSide ?? "",
+    };
+}
+
+// Shows the creator's own outcome text on each side option once it's typed, e.g. "Dodgers win",
+// and falls back to "Side A" / "Side B" while the outcome field is still empty.
+export function sideLabel(outcome, fallback) {
+    const trimmed = outcome.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+}
+

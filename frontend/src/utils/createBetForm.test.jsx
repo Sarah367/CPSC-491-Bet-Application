@@ -4,6 +4,10 @@ import {
     parseAmountToCents,
     validateCreateBetForm,
     buildCreateBetPayload,
+    validateEditBetForm,
+    buildEditBetPayload,
+    betToFormData,
+    sideLabel,
 } from "./createBetForm";
 
 const NOW = new Date("2026-09-26T12:00:00Z");
@@ -193,4 +197,130 @@ describe("buildCreateBetPayload", () => {
             termsAcknowledged: true,
         });
     });
+
+    describe("validateEditBetForm (SCRUM-36)", () => {
+    it("doesn't require the terms checkbox", () => {
+        expect(validateEditBetForm({ ...validNonMonetary, termsAcknowledged: false }, NOW)).toEqual({});
+    });
+ 
+    it("uses the same field rules as Create", () => {
+        const errors = validateEditBetForm(
+            { ...validNonMonetary, outcomeB: " dodgers WIN ", outcomeDeadline: "2026-09-30T17:00" },
+            NOW
+        );
+ 
+        expect(errors.outcomeB).toBe("Outcome B must be different from Outcome A.");
+        expect(errors.outcomeDeadline).toBe("Outcome deadline must be after the participation deadline.");
+    });
+ 
+    it("Create still requires the terms checkbox", () => {
+        expect(validateCreateBetForm({ ...validNonMonetary, termsAcknowledged: false }, NOW).termsAcknowledged)
+            .toBe("You must acknowledge the bet terms to create a bet.");
+    });
+});
+
+describe("buildEditBetPayload (SCRUM-36)", () => {
+    it("builds the same fields as Create, without termsAcknowledged", () => {
+        const payload = buildEditBetPayload(validNonMonetary);
+ 
+        expect(payload).toEqual({
+            title: "Will the Dodgers win Friday?",
+            description: "Regular season game",
+            outcomeA: "Dodgers win",
+            outcomeB: "Dodgers lose",
+            deadline: new Date("2026-10-01T17:00").toISOString(),
+            outcomeDeadline: new Date("2026-10-02T17:00").toISOString(),
+            visibility: "public",
+            resolutionMethod: "external",
+            stakeType: "nonMonetary",
+            creatorSide: "A",
+            stakeDescription: "Loser buys dinner",
+        });
+        expect(payload).not.toHaveProperty("termsAcknowledged");
+    });
+ 
+    it("sends cents and USD for a monetary stake", () => {
+        const payload = buildEditBetPayload({ ...validNonMonetary, stakeType: "monetary", stakeAmount: "12.50" });
+ 
+        expect(payload).toMatchObject({ stakeAmountCents: 1250, currency: "USD" });
+        expect(payload).not.toHaveProperty("stakeDescription");
+    });
+ 
+    it("Create's payload still includes termsAcknowledged", () => {
+        expect(buildCreateBetPayload(validNonMonetary).termsAcknowledged).toBe(true);
+    });
+});
+describe("betToFormData (SCRUM-36)", () => {
+    const deadline = new Date(2026, 10, 5, 18, 30);
+    const outcomeDeadline = new Date(2026, 10, 6, 9, 5);
+
+    function apiBet(overrides = {}) {
+        return {
+            id: "bet-1",
+            title: "Will it rain?",
+            description: "Weather bet",
+            outcomeA: "Rain",
+            outcomeB: "No rain",
+            deadline: deadline.toISOString(),
+            outcomeDeadline: outcomeDeadline.toISOString(),
+            visibility: "private",
+            resolutionMethod: "personal",
+            stakeType: "nonMonetary",
+            stakeDescription: "Loser buys coffee",
+            creatorSide: "B",
+            participantUids: ["creator-uid"],
+            ...overrides,
+        };
+    }
+
+    it("fills the form from the Bet, with deadlines in local datetime-local format", () => {
+        expect(betToFormData(apiBet())).toEqual({
+            ...INITIAL_FORM_DATA,
+            title: "Will it rain?",
+            description: "Weather bet",
+            outcomeA: "Rain",
+            outcomeB: "No rain",
+            deadline: "2026-11-05T18:30",
+            outcomeDeadline: "2026-11-06T09:05",
+            visibility: "private",
+            resolutionMethod: "personal",
+            stakeType: "nonMonetary",
+            stakeAmount: "",
+            stakeDescription: "Loser buys coffee",
+            creatorSide: "B",
+        });
+    });
+
+    it("turns a monetary stake's cents back into dollars", () => {
+        const form = betToFormData(apiBet({ stakeType: "monetary", stakeAmountCents: 1250, currency: "USD", stakeDescription: undefined }));
+
+        expect(form.stakeAmount).toBe("12.50");
+        expect(form.stakeDescription).toBe("");
+    });
+
+    it("never copies fields the form doesn't have, like participantUids", () => {
+        expect(betToFormData(apiBet())).not.toHaveProperty("participantUids");
+    });
+
+    it("round-trips: a Bet turned into form data builds back into the same values", () => {
+        const payload = buildEditBetPayload(betToFormData(apiBet()));
+
+        expect(payload).toMatchObject({
+            title: "Will it rain?",
+            outcomeA: "Rain",
+            deadline: deadline.toISOString(),
+            outcomeDeadline: outcomeDeadline.toISOString(),
+            creatorSide: "B",
+            stakeDescription: "Loser buys coffee",
+        });
+    });
+});
+
+describe("sideLabel", () => {
+    it("shows the outcome text, or the fallback while it's empty", () => {
+        expect(sideLabel("  Rain ", "Side A")).toBe("Rain");
+        expect(sideLabel("   ", "Side A")).toBe("Side A");
+    });
+});
+
 });

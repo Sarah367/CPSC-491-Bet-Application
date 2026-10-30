@@ -3,86 +3,15 @@ import {Link,Navigate} from "react-router-dom";
 import {useAuth} from "../context/useAuth";
 import {apiPost, ApiError, NotAuthenticatedError} from "../services/apiClient";
 import "./CreateBetPage.css";
+import {RadioGroup, TextField, CheckboxField} from "../components/BetFormFields";
+
 import {
     FIXED_CURRENCY,
     INITIAL_FORM_DATA,
+    sideLabel,
     buildCreateBetPayload,
     validateCreateBetForm,
 } from "../utils/createBetForm";
-
-function RadioGroup({legend, name, options, value, onChange,error}) {
-    const errorId = `${name}-error`;
-    return (
-        <fieldset
-            className="create-bet-radio-group"
-            aria-describedby={error ? errorId : undefined}
-        >
-            <legend>{legend}</legend>
-            {options.map((option) => (
-                <label key={option.value} className="create-bet-radio">
-                    <input
-                        type="radio"
-                        name={name}
-                        value={option.value}
-                        checked={value === option.value}
-                        onChange={onChange}
-                    />
-                    <span>{option.label}</span>
-                </label>
-            ))}
-            {error && <p id={errorId} className="create-bet-field-error">{error}</p>}
-        </fieldset>
-    );
-}
-
-function TextField({id, label, error, hint, multiline=false, ...inputProps}) {
-    const errorId = `${id}-error`;
-    const hintId = `${id}-hint`;
-    const describedBy = [hint && hintId, error && errorId].filter(Boolean).join(" ") || undefined;
-    const sharedProps = {
-        id,
-        name: id,
-        "aria-invalid": error ? true : undefined,
-        "aria-describedby": describedBy,
-        ...inputProps,
-    };
-    return (
-        <div className="create-bet-field">
-            <label htmlFor={id}>{label}</label>
-            {hint && <p id={hintId} className="create-bet-hint">{hint}</p>}
-            {multiline ? <textarea rows={3} {...sharedProps} /> : <input {...sharedProps} />}
-            {error && <p id={errorId} className="create-bet-field-error">{error}</p>}
-        </div>
-    )
-}
-
-function CheckboxField({ id, label, checked, onChange, error }) {
-    const errorId = `${id}-error`;
-    return (
-        <div className="create-bet-field">
-            <label className="create-bet-checkbox" htmlFor={id}>
-                <input
-                    id={id}
-                    name={id}
-                    type="checkbox"
-                    checked={checked}
-                    onChange={onChange}
-                    aria-invalid={error ? true : undefined}
-                    aria-describedby={error ? errorId : undefined}
-                />
-                <span>{label}</span>
-            </label>
-            {error && <p id={errorId} className="create-bet-field-error">{error}</p>}
-        </div>
-    );
-}
-
-// Shows the creator's own outcome text on each side option once it's typed, e.g. "Dodgers win",
-// and falls back to "Side A" / "Side B" while the outcome field is still empty.
-function sideLabel(outcome, fallback) {
-    const trimmed = outcome.trim();
-    return trimmed.length > 0 ? trimmed : fallback;
-}
 
 function getSubmitErrorMessage(error) {
     if (error instanceof NotAuthenticatedError || (error instanceof ApiError && error.status === 401)) {
