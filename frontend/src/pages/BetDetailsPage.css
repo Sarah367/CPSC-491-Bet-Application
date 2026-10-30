@@ -75,3 +75,41 @@
         flex: 1;
     }
 }
+
+/* SCRUM-36: the title, with an Edit Bet button beside it for the creator. */
+.bet-details-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.bet-details-edit {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.bet-details-edit:hover {
+    background: var(--accent);
+    color: var(--accent-contrast);
+}
+
+.bet-details-edit:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.bet-details-notice {
+    margin: 0 0 16px;
+    padding: 10px 14px;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    color: var(--text);
+}
+

@@ -31,9 +31,9 @@ const authenticatedUser = {
     isAuthenticated: true,
 };
 
-function renderBetDetailsPage(betId = "bet-1") {
+function renderBetDetailsPage(betId = "bet-1", state = undefined) {
     return render(
-        <MemoryRouter initialEntries={[`/bets/${betId}`]}>
+        <MemoryRouter initialEntries={[{pathname: `/bets/${betId}`, state}]}>
             <Routes>
                 <Route path="/bets/:betId" element={<BetDetailsPage/>}/>
                 <Route path="/login" element={<p>Login Page</p>}/>
@@ -217,5 +217,54 @@ describe("BetDetailsPage: outcomes and joining (SCRUM-88)", () => {
  
         expect(await screen.findByText("This bet doesn't exist.")).toBeInTheDocument();
         expect(screen.queryByRole("button", {name: "Join Bet"})).not.toBeInTheDocument();
+    });
+});
+describe("BetDetailsPage: editing (SCRUM-36)", () => {
+    const creator = {loading: false, isAuthenticated: true, uid: "creator-uid", emailVerified: true};
+ 
+    function editableBet(overrides = {}) {
+        return fakeBet({
+            visibility: "public",
+            status: "draft",
+            creatorUid: "creator-uid",
+            participantCount: 1,
+            deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            ...overrides,
+        });
+    }
+ 
+    beforeEach(() => {
+        vi.clearAllMocks();
+        useAuth.mockReturnValue(creator);
+    });
+ 
+    it("shows an Edit Bet link to the creator while editing is allowed", async () => {
+        apiGet.mockResolvedValue({bet: editableBet(), viewerParticipation: {side: "A", role: "creator"}});
+ 
+        renderBetDetailsPage();
+ 
+        expect(await screen.findByRole("link", {name: "Edit Bet"})).toHaveAttribute("href", "/bets/bet-1/edit");
+    });
+ 
+    it.each([
+        ["someone who isn't the creator", {}, {uid: "someone-else"}],
+        ["a Bet someone else has joined", {participantCount: 2}, {}],
+        ["an Active Bet", {status: "active"}, {}],
+    ])("doesn't show Edit Bet to %s", async (_label, betOverrides, authOverrides) => {
+        apiGet.mockResolvedValue({bet: editableBet(betOverrides), viewerParticipation: null});
+        useAuth.mockReturnValue({...creator, ...authOverrides});
+ 
+        renderBetDetailsPage();
+ 
+        await screen.findByText("Outcome A");
+        expect(screen.queryByRole("link", {name: "Edit Bet"})).not.toBeInTheDocument();
+    });
+ 
+    it("shows the notice passed from the Edit page", async () => {
+        apiGet.mockResolvedValue({bet: editableBet(), viewerParticipation: {side: "A", role: "creator"}});
+ 
+        renderBetDetailsPage("bet-1", {notice: "Bet updated."});
+ 
+        expect(await screen.findByRole("status")).toHaveTextContent("Bet updated.");
     });
 });

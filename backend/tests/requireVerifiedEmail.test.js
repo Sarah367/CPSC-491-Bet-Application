@@ -135,3 +135,20 @@ it("runs authMiddleware, then requireVerifiedEmail, then joinBet on POST /:id/jo
         joinBet,
     ]);
 });
+
+it("runs authMiddleware, then requireVerifiedEmail, then updateBet on PATCH /:id", () => {
+    const betRoutes = require("../src/routes/betRoutes");
+    const authMiddleware = require("../src/middleware/authMiddleware");
+    const { updateBet } = require("../src/controllers/betController");
+
+    const patchLayer = betRoutes.stack.find(
+        (layer) => layer.route?.path === "/:id" && layer.route.methods.patch
+    );
+
+    expect(patchLayer).toBeDefined();
+    expect(patchLayer.route.stack.map((layer) => layer.handle)).toEqual([
+        authMiddleware,
+        requireVerifiedEmail,
+        updateBet,
+    ]);
+});

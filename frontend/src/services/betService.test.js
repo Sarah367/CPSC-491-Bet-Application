@@ -1,10 +1,11 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
-import { apiPost } from "./apiClient";
-import { joinBet } from "./betService";
+import { apiPost, apiPatch } from "./apiClient";
+import { joinBet, updateBet } from "./betService";
 
 vi.mock("./apiClient", () => ({
     apiGet: vi.fn(),
     apiPost: vi.fn(),
+    apiPatch: vi.fn(),
 }));
 
 describe("joinBet", () => {
@@ -36,5 +37,26 @@ describe("joinBet", () => {
         apiPost.mockRejectedValueOnce(error);
 
         await expect(joinBet("bet-1", { side: "A", termsAcknowledged: true })).rejects.toBe(error);
+    });
+});
+describe("updateBet (SCRUM-36)", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+ 
+    it("sends the changes to PATCH /bets/:id and returns the response", async () => {
+        apiPatch.mockResolvedValueOnce({ message: "Bet updated successfully." });
+ 
+        await expect(updateBet("bet-1", { title: "New title" })).resolves.toEqual({
+            message: "Bet updated successfully.",
+        });
+        expect(apiPatch).toHaveBeenCalledWith("/bets/bet-1", { title: "New title" });
+    });
+ 
+    it("passes errors through unchanged", async () => {
+        const error = Object.assign(new Error("Request failed with status 409"), { status: 409 });
+        apiPatch.mockRejectedValueOnce(error);
+ 
+        await expect(updateBet("bet-1", { title: "New title" })).rejects.toBe(error);
     });
 });

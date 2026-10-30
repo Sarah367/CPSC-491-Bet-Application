@@ -1,37 +1,19 @@
 const {
-    isValidVisibility,
-    isValidResolutionMethod,
-    isValidStakeType,
     isValidBetSide,
-    isValidCurrency,
     BET_STAKE_TYPE,
     BET_VISIBILITY,
-    VALID_CURRENCY_VALUES,
 } = require("../models/betModel");
 const betService = require("../services/betService");
+const { validateBetFields } = require("../validators/betValidation");
+
 const { BetJoinError, JOIN_ERROR } = require("../errors/betJoinError");
+const { BetEditError, EDIT_ERROR } = require("../errors/betEditError");
+
 
 function sendBadRequest(res, message) {
     return res.status(400).json({error: "invalid_request", message});
 }
 
-function isBlankString(value) {
-    return typeof value !== "string" || value.trim().length === 0;
-}
-
-function isPositiveInteger(value) {
-    return typeof value === "number" && Number.isInteger(value) && value > 0;
-}
-
-// Outcomes are compared after trimming and ignoring case, so "Yes" and " yes " count as the same side.
-function normalizeOutcome(value) {
-    return value.trim().toLowerCase();
-}
-
-function parseDate(value) {
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
 
 // Validates the POST /api/bets request body. Only fields the client is allowed to control are checked here:
 // title, description, outcomeA, outcomeB, deadline, outcomeDeadline, visibility, resolutionMethod,
@@ -40,110 +22,15 @@ function parseDate(value) {
 // sideACount, sideBCount) are never read from the body. The backend always sets them.
 
 function validateCreateBetBody(body) {
-    if (isBlankString(body.title)) {
-        return {valid: false, message: "title is required."};
-    }
-
-    if (isBlankString(body.description)) {
-        return { valid: false, message: "description is required."};
-    }
-
-    if (isBlankString(body.outcomeA)) {
-        return { valid: false, message: "outcomeA is required." };
-    }
-
-    if (isBlankString(body.outcomeB)) {
-        return { valid: false, message: "outcomeB is required." };
-    }
-
-    if (normalizeOutcome(body.outcomeA) === normalizeOutcome(body.outcomeB)) {
-        return { valid: false, message: "outcomeA and outcomeB must be different." };
-    }
-
-    if (!isValidVisibility(body.visibility)) {
-        return {valid: false, message: "visibility must be \"public\" or \"private\"."};
-    }
-
-    if (!isValidResolutionMethod(body.resolutionMethod)) {
-        return {
-            valid: false,
-            message: "resolutionMethod must be \"external\" or \"personal\".",
-        };
-    }
-
-    if (isBlankString(body.deadline)) {
-        return { valid: false, message: "deadline is required." };
-    }
-
-    const parsedDeadline = parseDate(body.deadline);
-
-    if (!parsedDeadline) {
-        return { valid: false, message: "deadline must be a valid date."};
-    }
-
-    if (parsedDeadline.getTime() <= Date.now()) {
-        return { valid: false, message: "deadline must be in the future."};
-    }
-
-    if (isBlankString(body.outcomeDeadline)) {
-        return { valid: false, message: "outcomeDeadline is required." };
-    }
-
-    const parsedOutcomeDeadline = parseDate(body.outcomeDeadline);
-
-    if (!parsedOutcomeDeadline) {
-        return { valid: false, message: "outcomeDeadline must be a valid date." };
-    }
-
-    // Strictly later: a Bet should never lock and become due for resolution at the same moment.
-    if (parsedOutcomeDeadline.getTime() <= parsedDeadline.getTime()) {
-        return { valid: false, message: "outcomeDeadline must be after deadline." };
-    }
-
-    if (!isValidStakeType(body.stakeType)) {
-        return {
-            valid: false,
-            message: "stakeType must be \"monetary\" or \"nonMonetary\".",
-        };
-    }
-
-    if (body.stakeType === BET_STAKE_TYPE.MONETARY) {
-        if (!isPositiveInteger(body.stakeAmountCents)) {
-            return {
-                valid: false,
-                message: "stakeAmountCents must be a positive integer for monetary stakes."
-            };
-        }
-
-        if (isBlankString(body.currency)) {
-            return {
-                valid: false,
-                message: "currency is required for monetary stakes."
-            };
-        }
-        if (!isValidCurrency(body.currency.trim())) {
-            return {
-                valid: false,
-                message: `currency must be one of: ${VALID_CURRENCY_VALUES.join(", ")}.`,
-            };
-        }
-    } else if (isBlankString(body.stakeDescription)) {
-        return {
-            valid: false,
-            message: "stakeDescription is required for non-monetary stakes."
-        };
-    }
-
-    if (!isValidBetSide(body.creatorSide)) {
-        return { valid: false, message: "creatorSide must be \"A\" or \"B\"." };
-    }
-
+    const result = validateBetFields(body);
+    if(!result.valid) return result;
+    
     // Must be the boolean true. Truthy values like "true" or 1 are rejected on purpose.
     if (body.termsAcknowledged !== true) {
         return { valid: false, message: "termsAcknowledged must be true to create a bet." };
     }
-
-    return { valid: true, deadline: parsedDeadline, outcomeDeadline: parsedOutcomeDeadline };
+ 
+    return result;
 }
 
 // POST/api/bets - requires authMiddleware to have already run and populated req.user.
@@ -311,6 +198,81 @@ async function joinBet(req, res) {
         });
     }
 }
+// The fields a creator may change with PATCH /api/bets/:id (SCRUM-36).
+const EDITABLE_BET_FIELDS = Object.freeze([
+    "title",
+    "description",
+    "outcomeA",
+    "outcomeB",
+    "creatorSide",
+    "visibility",
+    "resolutionMethod",
+    "deadline",
+    "outcomeDeadline",
+    "stakeType",
+    "stakeAmountCents",
+    "currency",
+    "stakeDescription",
+]);
+
+// Checks the shape of a PATCH body: a non-empty object with only editable fields. Unlike Create,
+// fields the server controls (status, creatorUid, participant counts, and so on) are rejected
+// instead of ignored, so a client mistake doesn't silently do nothing. The values themselves are
+// checked later, together with the stored Bet.
+function validateEditBetBody(body) {
+    if (body === null || typeof body !== "object" || Array.isArray(body)) {
+        return { valid: false, message: "Request body must be a JSON object." };
+    }
+ 
+    const fields = Object.keys(body);
+    if (fields.length === 0) {
+        return { valid: false, message: "At least one field to edit is required." };
+    }
+ 
+    const notEditable = fields.filter((field) => !EDITABLE_BET_FIELDS.includes(field));
+    if (notEditable.length > 0) {
+        return { valid: false, message: `These fields can't be edited: ${notEditable.join(", ")}.` };
+    }
+ 
+    return { valid: true };
+}
+
+const EDIT_ERROR_RESPONSE = Object.freeze({
+    [EDIT_ERROR.NOT_FOUND]: { status: 404, body: { error: "not_found", message: "Bet not found." } },
+    [EDIT_ERROR.NOT_EDITABLE]: {
+        status: 409,
+        body: { error: "bet_not_editable", message: "This Bet can no longer be edited." },
+    },
+});
+
+// PATCH /api/bets/:id - requires authMiddleware and requireVerifiedEmail.
+// The editor's uid comes only from the verified token. Responds with a message only, so no stored
+// fields (like participantUids) are sent back; the page reloads the Bet through GET /api/bets/:id.
+async function updateBet(req, res) {
+    const validation = validateEditBetBody(req.body);
+    if (!validation.valid) {
+        return sendBadRequest(res, validation.message);
+    }
+ 
+    try {
+        await betService.updateBet(req.params.id, req.user.uid, req.body);
+        return res.status(200).json({ message: "Bet updated successfully." });
+    } catch (error) {
+        if (error instanceof BetEditError) {
+            if (error.code === EDIT_ERROR.INVALID) {
+                return sendBadRequest(res, error.message);
+            }
+            const response = EDIT_ERROR_RESPONSE[error.code];
+            return res.status(response.status).json(response.body);
+        }
+ 
+        console.error("[betController] Failed to update bet: ", error);
+        return res.status(500).json({
+            error: "server_error",
+            message: "Unable to update bet.",
+        });
+    }
+}
 
 module.exports = {
     createBet,
@@ -320,4 +282,7 @@ module.exports = {
     getBetById,
     joinBet,
     validateJoinBetBody,
+    updateBet,
+    validateEditBetBody,
+    EDITABLE_BET_FIELDS,
 };

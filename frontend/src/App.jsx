@@ -9,6 +9,8 @@ import CreateBetPage from './pages/CreateBetPage';
 import BetDetailsPage from './pages/BetDetailsPage';
 import './App.css'
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import EditBetPage from './pages/EditBetPage';
+
 
 function App() {
   return (
@@ -22,6 +24,7 @@ function App() {
         <Route path="/bets" element={<BetsListPage/>}/>
         <Route path="/bets/create" element={<CreateBetPage/>}/>
         <Route path="/bets/:betId" element={<BetDetailsPage/>}/>
+        <Route path="/bets/:betId/edit" element={<EditBetPage/>}/>
         <Route path="/verify-email" element={<VerifyEmailPage/>}/>
       </Routes>
     </BrowserRouter>

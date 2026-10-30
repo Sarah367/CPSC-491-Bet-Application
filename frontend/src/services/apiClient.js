@@ -87,7 +87,9 @@ export async function apiRequest(path, options = {}) {
 export function apiGet(path, options = {}) {
     return apiRequest(path, { ...options, method: "GET" });
 }
-
+export function apiPatch(path, body, options = {}) {
+    return apiRequest(path, { ...options, method: "PATCH", body });
+}
 export function apiPost(path, body, options = {}) {
     return apiRequest(path, { ...options, method: "POST", body });
 }

@@ -15,6 +15,7 @@ import {
     apiPost,
     ApiError,
     NotAuthenticatedError,
+    apiPatch,
 } from "./apiClient";
 
 // Stands in for a Firebase User: only getIdToken() matters to the client.
@@ -127,6 +128,20 @@ describe("apiClient", () => {
         expect(init.method).toBe("POST");
         expect(init.headers["Content-Type"]).toBe("application/json");
         expect(init.body).toBe(JSON.stringify({ title: "Dodgers win Friday" }));
+        expect(init.headers.Authorization).toBe("Bearer fake-id-token");
+    });
+
+    it("sends a JSON body with the PATCH method (SCRUM-36)", async () => {
+        signIn();
+        globalThis.fetch.mockResolvedValue(mockResponse(200, { message: "Bet updated successfully." }));
+ 
+        await apiPatch("/bets/bet-1", { title: "New title" });
+ 
+        const [url, init] = globalThis.fetch.mock.calls[0];
+        expect(url).toBe("http://localhost:5001/api/bets/bet-1");
+        expect(init.method).toBe("PATCH");
+        expect(init.headers["Content-Type"]).toBe("application/json");
+        expect(init.body).toBe(JSON.stringify({ title: "New title" }));
         expect(init.headers.Authorization).toBe("Bearer fake-id-token");
     });
 
