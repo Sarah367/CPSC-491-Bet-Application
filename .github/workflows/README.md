@@ -130,6 +130,11 @@ Record an exception in the Jira ticket with the package, the advisory, its sever
 | Merge | Oct 26 |
 | Follow-up | Merged `main` into every open branch, starting with the bottom of each stack |
 | Lesson | A second fix PR was opened for the same advisories, so the procedure now says to announce in Discord first |
+**How it fits with Dependabot:** Dependabot security updates open fix PRs automatically when a patched version exists. The daily audit catches the rest, like advisories with no patch yet, or ones Dependabot hasn't opened a PR for.
+
+**Running it by hand:** go to the **Actions** tab, click **Daily Security Audit**, then **Run workflow**. GitHub only shows this button, and only runs the schedule, once the workflow file is on main.
+
+**If it fails:** follow the "Audit failure" steps under Common failures below, through a normal PR from main.
 
 ## Where to see results
 
