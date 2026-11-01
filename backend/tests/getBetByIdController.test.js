@@ -1,5 +1,6 @@
 jest.mock("../src/services/betService", () => ({
     getBetById: jest.fn(),
+    getViewerParticipation: jest.fn(),
 }));
 
 const betService = require("../src/services/betService");
@@ -41,6 +42,8 @@ describe("getBetById controller", () => {
 
     beforeEach(() => {
         betService.getBetById.mockReset();
+        betService.getViewerParticipation.mockReset();
+        betService.getViewerParticipation.mockResolvedValue(null);
         res = createRes();
     });
 
@@ -51,7 +54,10 @@ describe("getBetById controller", () => {
         await getBetById(req, res);
 
         expect(res.statusCode).toBe(200);
-        expect(res.body).toEqual({ bet: fakeBet() });
+        // createdAt isn't on the client-safe allowlist (SCRUM-98), so it's left out.
+        const { createdAt: _createdAt, ...expectedBet } = fakeBet();
+        expect(res.body).toEqual({ bet: expectedBet, viewerParticipation: null });
+
         expect(betService.getBetById).toHaveBeenCalledWith("bet-1");
     });
 
@@ -62,7 +68,7 @@ describe("getBetById controller", () => {
         await getBetById(req, res);
 
         expect(res.statusCode).toBe(404);
-        expect(res.body).toEqual({ error: "not_found" });
+        expect(res.body).toEqual({ error: "not_found", message: "Bet not found." });
     });
 
     it("returns 404 (not 403) for a private bet viewed by a non-creator, without revealing it exists", async () => {
@@ -72,7 +78,7 @@ describe("getBetById controller", () => {
         await getBetById(req, res);
 
         expect(res.statusCode).toBe(404);
-        expect(res.body).toEqual({ error: "not_found" });
+        expect(res.body).toEqual({ error: "not_found", message: "Bet not found." });
     });
 
     it("returns 200 for a private bet viewed by its own creator", async () => {
@@ -96,5 +102,54 @@ describe("getBetById controller", () => {
         expect(res.body.error).toBe("server_error");
 
         consoleErrorSpy.mockRestore();
+    });
+    it("includes the viewer's participation when they've joined, looked up with the token's uid", async () => {
+        betService.getBetById.mockResolvedValue(fakeBet());
+        betService.getViewerParticipation.mockResolvedValue({ side: "B", role: "participant" });
+ 
+        const req = { params: { id: "bet-1" }, user: { uid: "joiner-uid" } };
+        await getBetById(req, res);
+ 
+        expect(res.statusCode).toBe(200);
+        expect(res.body.viewerParticipation).toEqual({ side: "B", role: "participant" });
+        expect(betService.getViewerParticipation).toHaveBeenCalledWith("bet-1", "joiner-uid");
+    });
+ 
+    it("doesn't look up participation for a private bet it hides with 404", async () => {
+        betService.getBetById.mockResolvedValue(fakeBet({ visibility: "private", creatorUid: "creator-uid" }));
+ 
+        const req = { params: { id: "bet-1" }, user: { uid: "someone-else" } };
+        await getBetById(req, res);
+ 
+        expect(res.statusCode).toBe(404);
+        expect(betService.getViewerParticipation).not.toHaveBeenCalled();
+    });
+
+
+    it("doesn't send participantUids or other stored-only fields to the client", async () => {
+        betService.getBetById.mockResolvedValue(
+            fakeBet({ participantUids: ["creator-uid", "other-uid"], internalOnlyField: "secret" })
+        );
+ 
+        const req = { params: { id: "bet-1" }, user: { uid: "viewer-uid" } };
+        await getBetById(req, res);
+ 
+        expect(res.statusCode).toBe(200);
+        expect(res.body.bet).not.toHaveProperty("participantUids");
+        expect(res.body.bet).not.toHaveProperty("internalOnlyField");
+    });
+ 
+    it("returns the same 404 body for a missing Bet and someone else's private Bet", async () => {
+        const req = { params: { id: "bet-1" }, user: { uid: "someone-else" } };
+ 
+        betService.getBetById.mockResolvedValue(null);
+        await getBetById(req, res);
+        const missingBody = res.body;
+ 
+        res = createRes();
+        betService.getBetById.mockResolvedValue(fakeBet({ visibility: "private", creatorUid: "creator-uid" }));
+        await getBetById(req, res);
+ 
+        expect(res.body).toEqual(missingBody);
     });
 });
