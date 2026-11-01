@@ -44,3 +44,84 @@ npm run build
 ```
 
 Then fill in the PR template's testing checklist.
+
+## Secrets and credentials
+
+### What secrets exist
+
+| Secret | Where it lives | Actually secret? |
+|---|---|---|
+| Firebase service account key (JSON) | `backend/secrets/`, local only | **Yes.** Full admin access to Firestore and Auth, bypassing all security rules. |
+| `backend/.env` | Each developer's machine | Yes — it points at the service account key path. |
+| `frontend/.env` (`VITE_FIREBASE_*`) | Each developer's machine | **No.** See below. |
+
+**The frontend Firebase config is not a secret.** Vite inlines every `VITE_`
+variable into the JavaScript bundle, so the API key, auth domain and project ID
+are visible to anyone who opens the site. That's how Firebase is designed to
+work: the web API key identifies the project, it doesn't authorize anything.
+What actually protects the data is Firebase Authentication and Firestore
+security rules. We still keep `frontend/.env` out of Git so each developer can
+point at their own project, but leaking it is not a credential incident.
+
+**The backend service account key is a real secret.** It authenticates as the
+project itself, bypasses every security rule, and can read or delete any
+document. Treat it like a password.
+
+### Rules
+
+- Never commit a secret. `.gitignore` covers `.env`, `.env.local`, `secrets/`,
+  and the service account key under any of its common filenames
+  (`*serviceAccount*.json`, `*service-account*.json`, `*firebase-adminsdk*.json`).
+- Never paste a secret into Discord, a PR comment, a Jira ticket, a Google Doc,
+  or a screenshot. Chat history is not a secure store and screenshots are easy
+  to forget about.
+- Never send the service account key as a file attachment.
+- `.env.example` is committed and must only ever contain placeholder values.
+
+### Getting set up as a new teammate
+
+1. Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to
+   `frontend/.env`.
+2. Ask the repository owner for the Firebase project access. You generate your
+   own service account key rather than receiving someone else's: Firebase
+   Console → Project settings → Service accounts → Generate new private key.
+3. Save the downloaded JSON to `backend/secrets/`. Don't rename it into the
+   repo root, and don't move it outside the ignored folder.
+4. Point `GOOGLE_APPLICATION_CREDENTIALS` in `backend/.env` at that file.
+5. Confirm it works: `node scripts/checkFirebaseAdmin.js` from `backend/`.
+6. Confirm Git doesn't see it: `git status` should show nothing new.
+
+Each developer having their own key means a single leaked key can be revoked
+without disrupting anyone else.
+
+### Rotating the service account key
+
+Do this if a key is committed, pasted anywhere, shared, or if a team member
+leaves the project.
+
+1. Firebase Console → Project settings → Service accounts → Generate new
+   private key.
+2. Every developer replaces their local copy and updates
+   `GOOGLE_APPLICATION_CREDENTIALS`.
+3. Confirm the backend still starts and `checkFirebaseAdmin.js` passes.
+4. **Then** delete the old key in Google Cloud Console → IAM & Admin →
+   Service accounts → Keys. Revoke only after the new key is confirmed working,
+   or you'll take the backend down.
+5. Record it in a Jira ticket: what was exposed, where, when, and when the old
+   key was revoked.
+
+Rotating does **not** undo exposure. Anything the key could reach was reachable
+for as long as it was exposed, so assume the data was accessible and say so in
+the ticket.
+
+### Verifying history is clean
+
+These search every branch and every commit, including files later deleted:
+
+```bash
+git log --all --full-history --oneline -- '*.env' '*serviceAccount*' 'backend/secrets/*'
+git log --all --oneline -S "BEGIN PRIVATE KEY"
+```
+
+Both should return nothing. If something turns up, rotate the key first, then
+worry about the history — a key in a deleted file is still a live key.
