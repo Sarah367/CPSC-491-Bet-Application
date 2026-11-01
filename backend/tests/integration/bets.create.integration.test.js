@@ -323,6 +323,9 @@ describe("POST /api/bets (Create Bet Integration)", () => {
 
             expect(res.status).toBe(400);
             expect(auth.verifyIdToken).not.toHaveBeenCalled();
+            // The body is our standard JSON error, not Express's HTML error page (SCRUM-86).
+            expect(res.headers["content-type"]).toMatch(/application\/json/);
+            expect(res.body).toEqual({ error: "invalid_request", message: "Request body must be valid JSON." });
             expect(mockBatchSet).not.toHaveBeenCalled();
             expect(mockBatchCommit).not.toHaveBeenCalled();
         });

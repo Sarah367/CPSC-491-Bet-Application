@@ -74,6 +74,48 @@ describe("API integration", () => {
         });
     });
 
+    describe("malformed request bodies (SCRUM-86)", () => {
+        it("returns the standard JSON error for a body that isn't valid JSON, on any route", async () => {
+            const res = await request(app)
+                .post("/api/protected")
+                .set("Authorization", "Bearer valid-token")
+                .set("Content-Type", "application/json")
+                .send("{ not json");
+
+            expect(res.status).toBe(400);
+            expect(res.headers["content-type"]).toMatch(/application\/json/);
+            expect(res.body).toEqual({ error: "invalid_request", message: "Request body must be valid JSON." });
+            expect(auth.verifyIdToken).not.toHaveBeenCalled();
+        });
+
+        it("returns 413 JSON for a body over the size limit", async () => {
+            const res = await request(app)
+                .post("/api/bets")
+                .set("Authorization", "Bearer valid-token")
+                .set("Content-Type", "application/json")
+                .send(JSON.stringify({ description: "x".repeat(200 * 1024) }));
+
+            expect(res.status).toBe(413);
+            expect(res.body).toEqual({ error: "payload_too_large", message: "Request body is too large." });
+        });
+
+        it("still parses a valid JSON body and continues to the route", async () => {
+            // The token is rejected, so the request stops at authMiddleware with a normal 401:
+            // proof that a well-formed body passed express.json() and reached the route.
+            auth.verifyIdToken.mockRejectedValue(new Error("auth/id-token-expired"));
+
+            const res = await request(app)
+                .post("/api/bets")
+                .set("Authorization", "Bearer valid-token")
+                .set("Content-Type", "application/json")
+                .send({ title: "Will it rain?" });
+
+            expect(res.status).toBe(401);
+            expect(res.body.error).toBe("unauthorized");
+            expect(auth.verifyIdToken).toHaveBeenCalledWith("valid-token");
+        });
+    });
+
     describe("unknown routes", () => {
         it("returns 404 for a route that doesn't exist", async () => {
             const res = await request(app).get("/api/does-not-exist");
