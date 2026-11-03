@@ -45,6 +45,14 @@ Security updates don't replace the audit gate above. When an advisory has **no p
 
 If a Dependabot PR conflicts with `main`, comment `@dependabot rebase` on the PR instead of fixing it by hand.
 
+## PR template check
+
+`pr-template.yml` (SCRUM-100) runs on every PR into `main`, including when the PR description is edited. It fails if the description has no `SCRUM-<number>`, has no ticked box under "Type of change" or "Testing checklist", or doesn't mention the ticket named in the PR title. Dependabot PRs are skipped.
+
+The logic lives in `.github/scripts/check-pr-template.mjs`, and its tests in `check-pr-template.test.mjs` run first in the same job. To run them locally (no install needed): `node --test .github/scripts/check-pr-template.test.mjs`. If you change `pull_request_template.md`, run these tests: they read the real template, so they fail if the check no longer understands it.
+
+**If it fails:** edit the PR description. The check re-runs when you save. For the review rule this supports, see "Reviewing a PR" in [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
+
 ## Daily security audit
 
 `security-audit.yml` runs the same `npm audit --audit-level=high` check on main once a day at 15:00 UTC (8:00 AM Pacific during daylight time, 7:00 AM otherwise), for both `backend` and `frontend`. It only reads `package-lock.json`, so it doesn't install packages and finishes in a few seconds.
