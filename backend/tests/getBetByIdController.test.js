@@ -48,13 +48,29 @@ describe("getBetById controller", () => {
     });
 
     it("returns 200 with the bet, including creatorDisplayName", async () => {
-        betService.getBetById.mockResolvedValue(fakeBet());
+        betService.getBetById.mockResolvedValue(fakeBet({
+            participantUids: ["creator-uid", "participant-uid"],
+            participantCount: 2,
+            stakeAmountCents: 500,
+        }));
 
         const req = { params: { id: "bet-1" }, user: { uid: "creator-uid" } };
         await getBetById(req, res);
 
         expect(res.statusCode).toBe(200);
-        expect(res.body).toEqual({ bet: fakeBet(), viewerParticipation: null });
+        expect(res.body).toEqual({
+            bet: {
+                id: "bet-1",
+                title: "Will the Dodgers win on Friday?",
+                description: "Friendly wager on Friday's game.",
+                deadline: "2026-12-31T00:00:00.000Z",
+                visibility: "public",
+                resolutionMethod: "external",
+                status: "active",
+                creatorDisplayName: "Jordan Rivera",
+            },
+            viewerParticipation: null,
+        });
 
         expect(betService.getBetById).toHaveBeenCalledWith("bet-1");
     });
@@ -66,7 +82,7 @@ describe("getBetById controller", () => {
         await getBetById(req, res);
 
         expect(res.statusCode).toBe(404);
-        expect(res.body).toEqual({ error: "not_found" });
+        expect(res.body).toEqual({ error: "not_found", message: "Bet not found." });
     });
 
     it("returns 404 (not 403) for a private bet viewed by a non-creator, without revealing it exists", async () => {
@@ -76,7 +92,7 @@ describe("getBetById controller", () => {
         await getBetById(req, res);
 
         expect(res.statusCode).toBe(404);
-        expect(res.body).toEqual({ error: "not_found" });
+        expect(res.body).toEqual({ error: "not_found", message: "Bet not found." });
     });
 
     it("returns 200 for a private bet viewed by its own creator", async () => {
