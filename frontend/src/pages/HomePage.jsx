@@ -10,7 +10,7 @@ const RECENT_BETS_LIMIT = 3;
 function formatDeadline(dateString) {
     const date = new Date(dateString);
     if (!dateString || Number.isNaN(date.getTime())) {
-        return "No deadline.";
+        return "No deadline";
     }
 
     return date.toLocaleString(undefined, {
@@ -29,15 +29,15 @@ function HomePage() {
     const [recentBets, setRecentBets] = useState([]);
     const [betsLoading, setBetsLoading] = useState(true);
     const [betsError, setBetsError] = useState("");
- 
+
     useEffect(() => {
         if (!isAuthenticated) {
             return;
         }
- 
+
         // Ignore the response if the page unmounts before it arrives.
         let cancelled = false;
- 
+
         async function loadRecentBets() {
             try {
                 const bets = await fetchMyBets();
@@ -56,11 +56,17 @@ function HomePage() {
                 }
             }
         }
- 
+
         loadRecentBets();
- 
+
         return () => {
             cancelled = true;
+            // Reset for the next run (for example, logging out and back in while
+            // Home stays mounted), so an earlier error or finished load doesn't stay
+            // on screen. This is done here, not at the start of the effect, because
+            // the react-hooks/set-state-in-effect lint rule doesn't allow that.
+            setBetsLoading(true);
+            setBetsError("");
         };
     }, [isAuthenticated]);
 
@@ -117,7 +123,7 @@ function HomePage() {
             </ul>
         );
     }
- 
+
     return (
         <div className="home-page">
             <header className="home-header">
@@ -136,7 +142,7 @@ function HomePage() {
                 <h1>Bet Home</h1>
                 <p>Start a new bet, or check on the bets you've made.</p>
                 <Link to="/bets/create" className="home-create-bet">Create a Bet</Link>
-                 
+
                 <section className="home-recent" aria-labelledby="home-recent-heading">
                     <div className="home-recent-header">
                         <h2 id="home-recent-heading">Recent Bets</h2>
