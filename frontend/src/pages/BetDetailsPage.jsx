@@ -2,6 +2,8 @@ import {useEffect, useState} from "react";
 import {Navigate, useParams, Link} from "react-router-dom";
 import {useAuth} from "../context/useAuth";
 import {apiGet, ApiError} from "../services/apiClient";
+import BetJoinSection from "../components/BetJoinSection";
+import {outcomeForSide} from "../utils/betJoinEligibility";
 import "./BetDetailsPage.css";
 
 const RESOLUTION_METHOD_LABELS = {
@@ -33,9 +35,10 @@ function formatResolutionMethod(resolutionMethod) {
 }
 
 function BetDetailsPage() {
-    const {loading: authLoading, isAuthenticated} = useAuth();
+    const {loading: authLoading, isAuthenticated, uid, emailVerified} = useAuth();
     const {betId} = useParams();
     const [bet, setBet] = useState(null);
+    const [viewerParticipation, setViewerParticipation] = useState(null);
     const [fetching, setFetching] = useState(true);
     const [notFound, setNotFound] = useState(false);
     const [error, setError] = useState("");
@@ -56,6 +59,7 @@ function BetDetailsPage() {
                 const data = await apiGet(`/bets/${betId}`);
                 if (!cancelled) {
                     setBet(data?.bet ?? null);
+                    setViewerParticipation(data?.viewerParticipation ?? null);
                 }
             } catch (err) {
                 if (cancelled) {
@@ -81,6 +85,12 @@ function BetDetailsPage() {
         };
     }, [isAuthenticated, betId]);
 
+    function handleJoined(data) {
+        if (data?.bet) {
+            setBet(data.bet);
+        }
+        setViewerParticipation(data?.viewerParticipation ?? null);
+    }
     if (authLoading) {
         return <p>Loading...</p>;
     }
@@ -106,6 +116,14 @@ function BetDetailsPage() {
                         <dd>{bet.description || "No description"}</dd>
                     </div>
                     <div className="bet-details-row">
+                        <dt>Outcome A</dt>
+                        <dd>{outcomeForSide(bet, "A")}</dd>
+                    </div>
+                    <div className="bet-details-row">
+                        <dt>Outcome B</dt>
+                        <dd>{outcomeForSide(bet, "B")}</dd>
+                    </div>
+                    <div className="bet-details-row">
                         <dt>Creator</dt>
                         <dd>{bet.creatorDisplayName ?? "Unknown"}</dd>
                     </div>
@@ -125,6 +143,10 @@ function BetDetailsPage() {
                         <dt>Status</dt>
                         <dd>{bet.status}</dd>
                     </div>
+                    <div className="bet-details-row">
+                        <dt>Participants</dt>
+                        <dd>{bet.participantCount ?? 0}</dd>
+                    </div>
                 </dl>
             </section>
         );
@@ -134,6 +156,15 @@ function BetDetailsPage() {
         <div className="bet-details-page">
             <main className="bet-details-main">
                 {content}
+                {bet && !fetching && !notFound && !error && (
+                    <BetJoinSection
+                        bet={bet}
+                        viewerParticipation={viewerParticipation}
+                        uid={uid}
+                        emailVerified={emailVerified}
+                        onJoined={handleJoined}
+                    />
+                )}
                 <p className="bet-details-back"><Link to="/home">Back to Home</Link></p>
             </main>
         </div>
