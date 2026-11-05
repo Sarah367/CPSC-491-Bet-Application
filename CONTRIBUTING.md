@@ -45,6 +45,44 @@ npm run build
 
 Then fill in the PR template's testing checklist.
 
+## Reviewing a PR
+
+The PR template is our record of what changed, which Jira ticket it was for,
+and how it was tested. It only works if it's actually filled in.
+
+**Don't approve a PR until its template is complete.** Before approving, check:
+
+1. **The Jira ticket is filled in and correct.** The `**Jira:**` line has a real
+   `SCRUM-<number>`, and it's the ticket this PR actually implements, matching
+   the title. Open the ticket if you're not sure. A template copied from another
+   PR often still has the old ticket.
+2. **"Type of change" has a box ticked.**
+3. **Every testing checklist box that applies is ticked.** For an item that
+   doesn't apply (like the regression test on a feature), the author should say
+   why under "If no tests were added, why", not just leave it blank.
+4. **The summary says what the PR does.** "This PR accomplishes the following"
+   isn't left as an empty `-`.
+
+If something's missing, request changes and say what. Don't approve it and
+trust that the author will fix it later. This applies to every reviewer, and
+to PRs from any teammate. Dependabot PRs are the only exception, since they
+don't use the template.
+
+### The `PR template filled in` check
+
+`.github/workflows/pr-template.yml` checks the parts a script can check, and
+fails the PR if:
+
+- the description has no `SCRUM-<number>`,
+- no "Type of change" box or no "Testing checklist" box is ticked, or
+- the title names a ticket (e.g. `SCRUM-71: ...`) that isn't anywhere in the
+  description.
+
+It re-runs automatically when the description is edited, so fixing the
+description turns it green without a new commit. A green check doesn't replace
+the review above, though. The script can't tell whether the ticket is the right
+one when the title has none, or whether the ticked boxes are true.
+
 ## Secrets and credentials
 
 ### What secrets exist
