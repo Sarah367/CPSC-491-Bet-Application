@@ -275,31 +275,31 @@ describe("HomePage Recent Bets", () => {
 
         consoleSpy.mockRestore();
     });
-    
+
     it("links each Recent Bet's title to its Bet Details page", async () => {
         fetchMyBets.mockResolvedValue([fakeBet("1"), fakeBet("2"), fakeBet("3")]);
- 
+
         renderHomePage();
- 
+
         expect(await screen.findByRole("link", { name: "Bet 1" })).toHaveAttribute("href", "/bets/1");
         expect(screen.getByRole("link", { name: "Bet 2" })).toHaveAttribute("href", "/bets/2");
         expect(screen.getByRole("link", { name: "Bet 3" })).toHaveAttribute("href", "/bets/3");
     });
- 
+
     it("only links the 3 Bets it shows", async () => {
         fetchMyBets.mockResolvedValue([
             fakeBet("1"), fakeBet("2"), fakeBet("3"), fakeBet("4"),
         ]);
- 
+
         renderHomePage();
- 
+
         await screen.findByRole("link", { name: "Bet 1" });
         expect(screen.queryByRole("link", { name: "Bet 4" })).not.toBeInTheDocument();
     });
- 
+
     it("opens the Bet Details page when a Recent Bet is clicked", async () => {
         fetchMyBets.mockResolvedValue([fakeBet("1"), fakeBet("2")]);
- 
+
         render(
             <MemoryRouter initialEntries={["/home"]}>
                 <Routes>
@@ -308,9 +308,9 @@ describe("HomePage Recent Bets", () => {
                 </Routes>
             </MemoryRouter>
         );
- 
+
         fireEvent.click(await screen.findByRole("link", { name: "Bet 2" }));
- 
+
         expect(screen.getByText("Bet Details Page")).toBeInTheDocument();
     });
 

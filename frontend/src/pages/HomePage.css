@@ -150,7 +150,7 @@
     position: relative;
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
- 
+
 /* The card lifts slightly on hover, to show it's clickable. */
 .home-recent-item:hover {
     transform: translateY(-2px);
@@ -168,20 +168,20 @@
     color: inherit;
     text-decoration: none;
 }
- 
+
 /* The whole card shows it's clickable, so the title itself isn't underlined on hover. */
 .home-recent-link:hover {
     color: inherit;
     text-decoration: none;
 }
- 
+
 .home-recent-link::after {
     content: "";
     position: absolute;
     inset: 0;
     border-radius: 12px;
 }
- 
+
 /* The outline is drawn around the card instead. */
 .home-recent-link:focus-visible {
     outline: none;
@@ -192,12 +192,12 @@
     .home-recent-item {
         transition: none;
     }
- 
+
     .home-recent-item:hover {
         transform: none;
     }
 }
- 
+
 .home-recent-meta {
     display: flex;
     flex-wrap: wrap;
