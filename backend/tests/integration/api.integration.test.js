@@ -81,4 +81,22 @@ describe("API integration", () => {
             expect(res.status).toBe(404);
         });
     });
+
+    describe("malformed JSON requests", () => {
+        it("returns a generic JSON error without exposing parser details", async () => {
+            const res = await request(app)
+                .post("/api/bets")
+                .set("Content-Type", "application/json")
+                .send('{"title":');
+
+            expect(res.status).toBe(400);
+            expect(res.headers["content-type"]).toMatch(/application\/json/);
+            expect(res.body).toEqual({
+                error: "invalid_request",
+                message: "Request body must contain valid JSON.",
+            });
+            expect(JSON.stringify(res.body)).not.toMatch(/SyntaxError|stack|at /i);
+            expect(auth.verifyIdToken).not.toHaveBeenCalled();
+        });
+    });
 });
