@@ -6,6 +6,11 @@ export async function fetchPublicBets() {
     return data.bets;
 }
 
+export async function fetchMyBets() {
+    const data = await apiGet("/bets/mine");
+    return data?.bets ?? [];
+}
+
 // joins a public Bet on the chosen side 
 // Returns { message, bet, viewerParticipation }, where bet is the updated Bet re-read
 // by the server after joining. Errors are passed through as ApiError so the page can
