@@ -1,0 +1,43 @@
+name: PR Template
+
+# SCRUM-100: fail a PR whose template isn't filled in (no Jira ticket, no
+# ticked boxes, or a title ticket that doesn't match the body). See
+# "Reviewing a PR" in CONTRIBUTING.md.
+
+on:
+  pull_request:
+    branches: [main]
+    # `edited` re-runs the check when someone fixes the description, so no
+    # new commit is needed to turn it green.
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: pr-template-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: PR template filled in
+    runs-on: ubuntu-latest
+    # Dependabot PRs don't use the template.
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Test the checker
+        run: node --test .github/scripts/check-pr-template.test.mjs
+
+      - name: Check the PR description
+        # Passed through env, never interpolated into the script, so a PR
+        # title or body can't inject shell commands.
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node .github/scripts/check-pr-template.mjs
