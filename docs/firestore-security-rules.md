@@ -49,11 +49,16 @@ firebase deploy --only firestore:rules --project <firebase-project-id>
 
 You can also paste the contents of `firestore.rules` into **Firebase Console → Firestore Database → Rules** and click **Publish**. If you do, make sure the Console version matches the committed file, or the next CLI deploy will overwrite it.
 
-## Verifying (Rules Playground)
+## Automated testing
 
-Automated rules tests (`@firebase/rules-unit-testing`) are intentionally not used. They need the Firestore emulator (and Java), which CI doesn't have, and CONTRIBUTING.md requires tests to be deterministic and never contact a real Firebase project.
+`firestore.rules` is tested automatically by the **Firestore Rules Tests** workflow (`.github/workflows/firestore-rules.yml`, SCRUM-102) on every pull request and push to `main`.
 
-Verify manually after deploying, in **Firebase Console → Firestore Database → Rules → Rules Playground**:
+- The tests live in `firestore-tests/firestore.rules.test.js` and run against the local Firestore emulator only, with the project ID `demo-bet-rules`. They never contact a real Firebase project and need no credentials.
+- They check that clients are denied direct access to Bets (get, create, and collection queries, signed in or out), to `bets/{betId}/participants/{uid}` (get and update, even for the participant's own record), and to every other path through the catch-all rule.
+- `withSecurityRulesDisabled()` is only used to seed test data into the emulator. It isn't a test of the backend's Admin SDK.
+- To run them locally (Node 22 and Java 21 required, no Firebase login): `cd firestore-tests`, then `npm ci` and `npm test`.
+
+The Rules Playground check from SCRUM-33 (#82) was the first verification. These tests now repeat it on every change.
 
 | # | Simulation type | Location | Authenticated | Expected |
 |---|-----------------|----------|:-------------:|----------|
