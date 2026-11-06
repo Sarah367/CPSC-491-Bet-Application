@@ -1,0 +1,62 @@
+name: Firestore Rules Tests
+
+# Tests firestore.rules against the local Firestore emulator (SCRUM-102).
+# The tests use the demo- project ID "demo-bet-rules", so they never contact a real
+# Firebase project and need no credentials or secrets.
+# Runs on every pull request (not only ones that change the rules), so the check is
+# always present if the team makes it required.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# The tests only need to read the code.
+permissions:
+  contents: read
+
+jobs:
+  rules-tests:
+    name: Firestore rules tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: firestore-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: firestore-tests/package-lock.json
+
+      # The Firestore emulator needs Java 21 or newer (firebase-tools 15).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # The emulator JAR is downloaded the first time it runs. Caching it saves that
+      # download on later runs. A missing or stale cache is fine: the CLI downloads
+      # whatever version it needs.
+      - name: Cache Firestore emulator
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('firestore-tests/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-firebase-emulators-
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Starts the emulator, runs the tests against firestore.rules, then shuts it down.
+      - name: Run rules tests
+        run: npm test
+
+      # Same high/critical gate as ci.yml. Runs even if the tests failed, so a new
+      # advisory never hides a test result, or the other way around.
+      - name: Audit dependencies (high/critical)
+        if: ${{ !cancelled() }}
+        run: npm audit --audit-level=high

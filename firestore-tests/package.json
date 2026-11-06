@@ -1,0 +1,17 @@
+{
+  "name": "firestore-tests",
+  "private": true,
+  "description": "Automated tests for firestore.rules, run against the Firestore emulator (SCRUM-102).",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-bet-rules --config ../firebase.json \"node --test firestore.rules.test.js\"",
+    "audit": "npm audit --audit-level=high"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.1.0",
+    "firebase-tools": "15.34.1"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.5"
+  }
+}

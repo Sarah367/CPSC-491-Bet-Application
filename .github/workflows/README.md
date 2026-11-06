@@ -1,6 +1,7 @@
 # CI (GitHub Actions)
 
-`ci.yml` runs automatically on every push and pull request targeting `main`. It exists to catch broken code before it merges — nobody needs to run these checks by hand, but this doc explains what's running and how to fix it when it goes red.
+`ci.yml` runs automatically on every push and pull request targeting `main`. It exists to catch broken code before it merges — nobody needs to run these checks by hand, but this doc explains what's running and how to fix it when it goes red. The other workflows (the PR template check, the Firestore rules tests, and the daily security audit) each have their own section below.
+
 
 ## What it checks
 
@@ -31,7 +32,7 @@ Both the backend and frontend jobs end with `npm audit --audit-level=high`, whic
 
 Dependabot runs in two separate ways in this repo:
 
-- **Version updates** are configured in `.github/dependabot.yml` (SCRUM-49). Once a week, Dependabot opens grouped PRs that bump minor and patch versions in `backend/` and `frontend/`. This is routine maintenance.
+- **Version updates** are configured in `.github/dependabot.yml` (SCRUM-49). Once a week, Dependabot opens grouped PRs that bump minor and patch versions in `backend/`, `frontend/`, and `firestore-tests/`. This is routine maintenance.
 - **Security updates** are enabled in the repo's **Settings → Code security** (SCRUM-75), not in `dependabot.yml`. When GitHub publishes an advisory that affects one of our dependencies **and a patched version exists**, Dependabot should open a fix PR right away instead of waiting for the weekly run. It didn't for either advisory in SCRUM-89, so don't wait for it (see [Vulnerability response](#vulnerability-response)).
 
 Security updates don't replace the audit gate above. When an advisory has **no patched version**, Dependabot can't open a fix PR, and `npm audit` will still fail CI. Fix those manually by following [Vulnerability response](#vulnerability-response). If no patched version exists anywhere in the dependency chain, removing or replacing the package that pulls it in may be the only option (for example, SCRUM-60 replaced `nodemon` with `node --watch` because no patched `braces` version existed).
@@ -53,9 +54,26 @@ The logic lives in `.github/scripts/check-pr-template.mjs`, and its tests in `ch
 
 **If it fails:** edit the PR description. The check re-runs when you save. For the review rule this supports, see "Reviewing a PR" in [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
 
+## Firestore rules tests
+
+`firestore-rules.yml` (SCRUM-102) runs on every pull request and every push to `main`. It tests the repo-root `firestore.rules` against the local Firestore emulator, then runs `npm audit --audit-level=high` on the test tools.
+
+| Step | What it does |
+|---|---|
+| Set up Node 22 and Java 21 | The emulator is a Java program, so it needs Java. |
+| Restore the emulator cache | `firebase-tools` downloads the emulator `.jar` on first use, into `~/.cache/firebase/emulators`. The cache saves that download on later runs. |
+| `npm ci` → `npm test` | Starts the emulator with `firebase emulators:exec`, runs the tests in `firestore-tests/` with Node's built-in test runner, then stops the emulator. |
+| `npm audit --audit-level=high` | The same audit gate as `ci.yml`, for `firestore-tests/package-lock.json`. Runs even if the tests fail. |
+
+The tests use the fake project ID `demo-bet-rules`. Firebase treats `demo-` project IDs as emulator-only, so the tests can't reach the real project, and the workflow needs no secrets. It runs on every PR, not only ones that change the rules, so the check is always present if the team later makes it required.
+
+`firestore-tests/` has its own `package.json`, so the emulator tools (`firebase-tools`, `@firebase/rules-unit-testing`) stay out of the backend and frontend lockfiles. Like `frontend/`, it uses an npm `overrides` entry to force `@grpc/grpc-js` to `^1.14.5`, because the Firebase JS SDK version we use still pins `~1.9.0`, which has high-severity advisories. Remove the override once a Firebase release no longer needs it.
+
+**If it fails:** if a test failed, someone changed `firestore.rules` in a way that allows client access. See [`docs/firestore-security-rules.md`](../../docs/firestore-security-rules.md). If the emulator didn't start, check the Java step, or re-run the job if the emulator download failed. For an audit failure, follow [Vulnerability response](#vulnerability-response).
+
 ## Daily security audit
 
-`security-audit.yml` runs the same `npm audit --audit-level=high` check on main once a day at 15:00 UTC (8:00 AM Pacific during daylight time, 7:00 AM otherwise), for both `backend` and `frontend`. It only reads `package-lock.json`, so it doesn't install packages and finishes in a few seconds.
+`security-audit.yml` runs the same `npm audit --audit-level=high` check on main once a day at 15:00 UTC (8:00 AM Pacific during daylight time, 7:00 AM otherwise), for `backend`, `frontend`, and `firestore-tests`. It only reads `package-lock.json`, so it doesn't install packages and finishes in a few seconds.
 
 **Why it exists:** new advisories are published all the time, so main can become "vulnerable" overnight without any code changing. Before this workflow, we only found out when the next PR's CI failed, and by then every open PR was failing at once. The daily run shows the problem on its own, so someone can start a fix PR right away.
 
@@ -77,7 +95,7 @@ What to do when a **high or critical** npm advisory shows up, from any source: a
 2. **Announce it in Discord** before starting, so two people don't open the same fix.
 3. **Create a Jira chore ticket** with the advisory link and package, and a branch from the latest `main`.
 4. **Fix it with the safest option** (see below). Never run `npm audit fix --force`.
-5. **Check it:** both audits pass, plus the normal tests, lint, and build.
+5. **Check it:** all three audits pass (backend/, frontend/, and firestore-tests/) pass, plus the normal tests, lint, and build.
 6. **Open the PR and ask for a quick review.** Every PR is blocked until it merges.
 7. **After it merges, update open branches** with `main`.
 
@@ -107,7 +125,7 @@ Keep the PR small: a branch from current `main`, ideally only lockfile changes, 
 
 ### Before merging
 
-- `npm audit --audit-level=high` passes in **both** `backend/` and `frontend/`.
+- `npm audit --audit-level=high` passes in backend/, frontend/, and firestore-tests/.
 - Backend: `npm test`. Frontend: `npm run lint`, `npm test`, and `npm run build`.
 - The advisory no longer appears in `npm audit`.
 
@@ -158,6 +176,11 @@ cd frontend
 npm run lint
 npm test
 npm run build
+
+# Firestore rules (needs Java 21: check with `java -version`)
+cd firestore-tests
+npm ci
+npm test
 ```
 
 If `npm test` or `npm run build` fails locally with a Firebase error (`auth/invalid-api-key`), you're missing `frontend/.env` — see the root `README.md` for setup. CI itself doesn't need this: it sets dummy `VITE_FIREBASE_*` values as env vars on the test step, since the tests mock Firebase's auth calls and never talk to a real project.

@@ -1,7 +1,8 @@
 # Dependabot configuration
 # Docs: https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
 #
-# Version updates: weekly PRs for outdated npm dependencies in backend/ and frontend/.
+# Version updates: weekly PRs for outdated npm dependencies in backend/, frontend/,
+# and firestore-tests/.
 # Security updates: PRs for vulnerable dependencies are opened as soon as an advisory
 # is published (requires "Dependabot security updates" to be enabled under
 # Settings > Code security). They reuse the labels/prefix settings below.
@@ -47,6 +48,29 @@ updates:
       prefix-development: "deps-dev(frontend)"
     groups:
       frontend-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Firestore rules test tooling (SCRUM-102). Only the shared "dependencies" label is
+  # used, since Dependabot can't add a label that doesn't exist in the repo yet.
+  - package-ecosystem: "npm"
+    directory: "/firestore-tests"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 10
+    target-branch: "main"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "deps(firestore-tests)"
+      prefix-development: "deps-dev(firestore-tests)"
+    groups:
+      firestore-tests-minor-and-patch:
         applies-to: version-updates
         update-types:
           - "minor"

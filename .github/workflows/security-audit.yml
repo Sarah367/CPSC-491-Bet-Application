@@ -20,10 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
-      # Audit both folders even if one of them fails.
+      # Audit every folder even if one of them fails.
       fail-fast: false
       matrix:
-        project: [backend, frontend]
+        # firestore-tests holds the Firestore rules test tooling (SCRUM-102).
+        project: [backend, frontend, firestore-tests]
     defaults:
       run:
         working-directory: ${{ matrix.project }}
