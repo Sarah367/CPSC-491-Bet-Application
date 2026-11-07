@@ -267,6 +267,102 @@ describe("GET /api/bets/mine (My Bets integration)", () => {
         });
     });
 
+    describe("limit (SCRUM-106)", () => {
+        // The newest three mix created and joined Bets, so the limit has to be applied
+        // after the merge and the newest-first sort.
+        function returnMixedBets() {
+            returnMyBets({
+                created: [
+                    makeBetDoc("created-1", betData({ createdAt: ts("2026-10-09T10:00:00.000Z") })),
+                    makeBetDoc("created-2", betData({ createdAt: ts("2026-10-06T10:00:00.000Z") })),
+                ],
+                joined: [
+                    makeBetDoc("joined-1", joinedBetData({ createdAt: ts("2026-10-10T10:00:00.000Z") })),
+                    makeBetDoc("joined-2", joinedBetData({ createdAt: ts("2026-10-08T10:00:00.000Z") })),
+                ],
+            });
+        }
+
+        it("returns only the newest Bets across created and joined", async () => {
+            returnMixedBets();
+
+            const res = await getAsUser("/api/bets/mine?limit=3");
+
+            expect(res.status).toBe(200);
+            expect(res.body.bets.map((bet) => bet.id)).toEqual(["joined-1", "created-1", "joined-2"]);
+            expect(res.body.bets[0]).toMatchObject({ viewerRole: "participant" });
+            expect(res.body.bets[1]).toMatchObject({ viewerRole: "creator" });
+        });
+
+        it("finds the newest Bets even when a query returns more than the limit, out of order", async () => {
+            returnMyBets({
+                created: [
+                    makeBetDoc("middle", betData({ createdAt: ts("2026-10-05T10:00:00.000Z") })),
+                    makeBetDoc("oldest", betData({ createdAt: ts("2026-10-01T10:00:00.000Z") })),
+                    makeBetDoc("newest", betData({ createdAt: ts("2026-10-09T10:00:00.000Z") })),
+                ],
+            });
+
+            const res = await getAsUser("/api/bets/mine?limit=2");
+
+            expect(res.status).toBe(200);
+            expect(res.body.bets.map((bet) => bet.id)).toEqual(["newest", "middle"]);
+        });
+
+        it("returns every Bet when there's no limit", async () => {
+            returnMixedBets();
+
+            const res = await getAsUser("/api/bets/mine");
+
+            expect(res.status).toBe(200);
+            expect(res.body.bets).toHaveLength(4);
+        });
+
+        it("keeps the same response fields with a limit", async () => {
+            returnMixedBets();
+
+            const res = await getAsUser("/api/bets/mine?limit=1");
+
+            expect(res.status).toBe(200);
+            expect(Object.keys(res.body.bets[0]).sort()).toEqual([
+                "createdAt",
+                "currency",
+                "deadline",
+                "id",
+                "stakeAmountCents",
+                "stakeType",
+                "status",
+                "title",
+                "viewerRole",
+                "visibility",
+            ]);
+            expect(JSON.stringify(res.body)).not.toContain(OTHER_UID);
+        });
+
+        it.each([
+            ["a decimal", "limit=2.5"],
+            ["zero", "limit=0"],
+            ["above the maximum", "limit=51"],
+            ["empty", "limit="],
+            ["repeated", "limit=3&limit=5"],
+        ])("returns 400 for %s without querying Firestore", async (_label, query) => {
+            const res = await getAsUser(`/api/bets/mine?${query}`);
+
+            expect(res.status).toBe(400);
+            expect(res.body).toEqual({
+                error: "invalid_request",
+                message: "limit must be a whole number between 1 and 50.",
+            });
+            expect(mockWhere).not.toHaveBeenCalled();
+        });
+
+        it("still requires a token", async () => {
+            const res = await request(app).get("/api/bets/mine?limit=3");
+
+            expect(res.status).toBe(401);
+        });
+    });
+
     describe("identity comes only from the verified token", () => {
         it("ignores a spoofed uid in the query string, request body, and X-User-Id header", async () => {
             const res = await request(app)

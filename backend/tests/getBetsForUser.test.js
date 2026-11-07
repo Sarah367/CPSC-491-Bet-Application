@@ -156,6 +156,78 @@ describe("getBetsForUser", () => {
         expect(JSON.stringify(bet)).not.toContain(OTHER_UID);
     });
 
+    describe("with a limit (SCRUM-106)", () => {
+        // The newest three mix created and joined Bets, so limiting each query on its
+        // own (instead of after the merge and sort) would return the wrong Bets.
+        function returnMixedBets() {
+            const joined = (id, iso) => fakeDoc(id, betData({
+                creatorUid: OTHER_UID,
+                participantUids: [OTHER_UID, UID],
+                createdAt: ts(iso),
+            }));
+            const created = (id, iso) => fakeDoc(id, betData({ createdAt: ts(iso) }));
+            returnCreated([
+                created("created-1", "2026-10-09T10:00:00.000Z"),
+                created("created-2", "2026-10-06T10:00:00.000Z"),
+                created("created-3", "2026-10-05T10:00:00.000Z"),
+            ]);
+            returnJoined([
+                joined("joined-1", "2026-10-10T10:00:00.000Z"),
+                joined("joined-2", "2026-10-08T10:00:00.000Z"),
+            ]);
+        }
+
+        it("returns only the newest Bets across created and joined", async () => {
+            returnMixedBets();
+
+            const bets = await getBetsForUser(UID, 3);
+
+            expect(bets.map((bet) => bet.id)).toEqual(["joined-1", "created-1", "joined-2"]);
+        });
+
+        it("finds the newest Bets even when a query returns more than the limit, out of order", async () => {
+            // Firestore doesn't sort these queries, so the newest Bet can come back last.
+            // Limiting each query before the merge and sort would drop it.
+            returnCreated([
+                fakeDoc("middle", betData({ createdAt: ts("2026-10-05T10:00:00.000Z") })),
+                fakeDoc("oldest", betData({ createdAt: ts("2026-10-01T10:00:00.000Z") })),
+                fakeDoc("newest", betData({ createdAt: ts("2026-10-09T10:00:00.000Z") })),
+            ]);
+
+            const bets = await getBetsForUser(UID, 2);
+
+            expect(bets.map((bet) => bet.id)).toEqual(["newest", "middle"]);
+        });
+
+        it("returns every Bet when the limit is larger than the list", async () => {
+            returnMixedBets();
+
+            const bets = await getBetsForUser(UID, 50);
+
+            expect(bets).toHaveLength(5);
+        });
+
+        it("returns every Bet when no limit is given", async () => {
+            returnMixedBets();
+
+            const bets = await getBetsForUser(UID);
+
+            expect(bets.map((bet) => bet.id)).toEqual(
+                ["joined-1", "created-1", "joined-2", "created-2", "created-3"],
+            );
+        });
+
+        it("removes duplicates before limiting", async () => {
+            const own = fakeDoc("own-bet", betData({ createdAt: ts("2026-10-10T10:00:00.000Z") }));
+            returnCreated([own, fakeDoc("older", betData({ createdAt: ts("2026-10-01T10:00:00.000Z") }))]);
+            returnJoined([own]);
+
+            const bets = await getBetsForUser(UID, 2);
+
+            expect(bets.map((bet) => bet.id)).toEqual(["own-bet", "older"]);
+        });
+    });
+
     it("rejects when either query fails", async () => {
         mockQueryResults.set(JOINED_QUERY, () => Promise.reject(new Error("Firestore unavailable")));
 

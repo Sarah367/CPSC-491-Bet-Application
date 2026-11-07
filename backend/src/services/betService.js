@@ -138,7 +138,7 @@ async function getBetsByCreator(uid) {
         .map(serializeBetDoc)
         .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
 }
- 
+
 // Returns every Bet the user created or joined, newest first (SCRUM-57).
 // Runs two queries because neither one finds everything:
 //   - creatorUid == uid finds Bets created before participantUids existed
@@ -147,23 +147,31 @@ async function getBetsByCreator(uid) {
 // A Bet the user created usually matches both, so results are merged by id.
 // Each query uses one field, so no composite index is needed, and sorting stays
 // in memory like getBetsByCreator.
-async function getBetsForUser(uid) {
+//
+// limit (optional, SCRUM-106) returns only the newest `limit` Bets. It's applied after
+// the merge and the newest-first sort, so it picks the newest across created and
+// joined Bets together. It shrinks the response, not the Firestore reads.
+async function getBetsForUser(uid, limit) {
     const bets = db.collection(BET_COLLECTION);
     const [createdSnapshot, joinedSnapshot] = await Promise.all([
         bets.where("creatorUid", "==", uid).get(),
         bets.where("participantUids", "array-contains", uid).get(),
     ]);
+
     const docsById = new Map();
     for (const doc of [...createdSnapshot.docs, ...joinedSnapshot.docs]) {
         if (!docsById.has(doc.id)) {
             docsById.set(doc.id, doc);
         }
     }
-    return [...docsById.values()]
+
+    const sortedBets = [...docsById.values()]
         .map((doc) => serializeMyBet(doc, uid))
         .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
-}
 
+    return limit === undefined ? sortedBets : sortedBets.slice(0, limit);
+}
+ 
 function toIsoString(value) {
     return value instanceof Timestamp ? value.toDate().toISOString() : value;
 }

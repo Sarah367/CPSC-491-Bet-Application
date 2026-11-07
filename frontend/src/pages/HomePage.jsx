@@ -40,9 +40,10 @@ function HomePage() {
 
         async function loadRecentBets() {
             try {
-                const bets = await fetchMyBets();
+                // The server returns only the newest few (SCRUM-106).
+                const bets = await fetchMyBets(RECENT_BETS_LIMIT);
                 if (!cancelled) {
-                    // The API already returns newest first, so the first few are the most recent.
+                    // Safety net: keep the preview at RECENT_BETS_LIMIT even if more come back.
                     setRecentBets(bets.slice(0, RECENT_BETS_LIMIT));
                 }
             } catch (err) {
@@ -97,7 +98,7 @@ function HomePage() {
     } else if (recentBets.length === 0) {
         recentBetsContent = (
             <p className="home-recent-message">
-                You haven't created any bets yet. Create a bet to get started!
+                You haven't created or joined any bets yet. Create a bet to get started!
             </p>
         );
     } else {
