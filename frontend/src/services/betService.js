@@ -5,3 +5,8 @@ export async function fetchPublicBets() {
     const data = await apiGet("/bets/public");
     return data.bets;
 }
+
+export async function fetchMyBets() {
+    const data = await apiGet("/bets/mine");
+    return data?.bets ?? [];
+}
