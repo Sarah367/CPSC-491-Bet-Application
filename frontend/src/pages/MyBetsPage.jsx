@@ -39,6 +39,15 @@ function formatStake(bet) {
     return bet.stakeDescription ?? "No stake";
 }
 
+
+// GET /api/bets/mine returns Bets the user created or joined, each with a
+// viewerRole from the server (SCRUM-57). Unknown roles show no label.
+const ROLE_LABELS = {
+    creator: "You created this Bet",
+    participant: "You joined this Bet",
+};
+
+
 function MyBetsPage() {
     const {loading, isAuthenticated} = useAuth();
     const [bets, setBets] = useState([]);
@@ -93,13 +102,14 @@ function MyBetsPage() {
     } else if (error) {
         content = <p role="alert">{error}</p>;
     } else if (bets.length === 0) {
-        content = <p>You haven't created any bets yet.</p>;
+        content = <p>You haven't created or joined any bets yet.</p>;
     } else {
         content = (
             <ul>
                 {bets.map((bet) => (
                     <li key={bet.id}>
                         <h2><Link to={`/bets/${bet.id}`}>{bet.title}</Link></h2>
+                        {ROLE_LABELS[bet.viewerRole] && <p>{ROLE_LABELS[bet.viewerRole]}</p>}
                         <p><strong>Status:</strong> {bet.status}</p>
                         <p><strong>Visibility:</strong> {bet.visibility}</p>
                         <p><strong>Deadline:</strong> {formatDeadline(bet.deadline)}</p>

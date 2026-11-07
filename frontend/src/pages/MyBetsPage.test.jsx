@@ -1,5 +1,5 @@
 import {vi, describe, it, beforeEach, expect} from "vitest";
-import {render, screen} from "@testing-library/react";
+import {render, screen, within} from "@testing-library/react";
 import {MemoryRouter, Routes, Route} from "react-router-dom";
 import {useAuth} from "../context/useAuth";
 import {apiGet} from "../services/apiClient";
@@ -71,7 +71,7 @@ describe("MyBetsPage", () => {
         apiGet.mockResolvedValue({bets: []});
 
         renderMyBetsPage();
-        await screen.findByText("You haven't created any bets yet.");
+        await screen.findByText("You haven't created or joined any bets yet.");
 
         expect(apiGet).toHaveBeenCalledTimes(1);
         expect(apiGet).toHaveBeenCalledWith("/bets/mine");
@@ -83,7 +83,7 @@ describe("MyBetsPage", () => {
 
         renderMyBetsPage();
 
-        expect(await screen.findByText("You haven't created any bets yet.")).toBeInTheDocument();
+        expect(await screen.findByText("You haven't created or joined any bets yet.")).toBeInTheDocument();
     });
 
     it("shows a friendly error message when the API call fails", async () => {
@@ -137,5 +137,69 @@ describe("MyBetsPage", () => {
         expect(screen.getByText(/draft/)).toBeInTheDocument();
         expect(screen.getByText(/private/)).toBeInTheDocument();
         expect(screen.queryByText("You haven't created any bets yet.")).not.toBeInTheDocument();
+        expect(screen.queryByText("You haven't created or joined any bets yet.")).not.toBeInTheDocument();
+    });
+
+    it("labels Bets the user created and Bets the user joined in the same list", async () => {
+        useAuth.mockReturnValue(authenticatedUser);
+        apiGet.mockResolvedValue({
+            bets: [
+                {
+                    id: "own-bet",
+                    title: "Will it rain on Friday?",
+                    status: "draft",
+                    visibility: "private",
+                    deadline: "2026-11-20T18:00:00.000Z",
+                    stakeType: "nonMonetary",
+                    stakeDescription: "Loser buys coffee",
+                    viewerRole: "creator",
+                },
+                {
+                    id: "joined-bet",
+                    title: "Will the Dodgers win on Friday?",
+                    status: "active",
+                    visibility: "public",
+                    deadline: "2026-11-21T18:00:00.000Z",
+                    stakeType: "monetary",
+                    stakeAmountCents: 500,
+                    currency: "USD",
+                    viewerRole: "participant",
+                },
+            ],
+        });
+
+        renderMyBetsPage();
+
+        const items = await screen.findAllByRole("listitem");
+        expect(items).toHaveLength(2);
+        expect(within(items[0]).getByRole("link", {name: "Will it rain on Friday?"}))
+            .toHaveAttribute("href", "/bets/own-bet");
+        expect(within(items[0]).getByText("You created this Bet")).toBeInTheDocument();
+        expect(within(items[1]).getByRole("link", {name: "Will the Dodgers win on Friday?"}))
+            .toHaveAttribute("href", "/bets/joined-bet");
+        expect(within(items[1]).getByText("You joined this Bet")).toBeInTheDocument();
+    });
+
+    it("shows no role label when a Bet has no recognized viewerRole", async () => {
+        useAuth.mockReturnValue(authenticatedUser);
+        apiGet.mockResolvedValue({
+            bets: [
+                {
+                    id: "bet-1",
+                    title: "Will it snow?",
+                    status: "draft",
+                    visibility: "public",
+                    deadline: "2026-11-20T18:00:00.000Z",
+                    stakeType: "nonMonetary",
+                    stakeDescription: "Loser buys lunch",
+                    viewerRole: "spectator",
+                },
+            ],
+        });
+
+        renderMyBetsPage();
+
+        await screen.findByRole("link", {name: "Will it snow?"});
+        expect(screen.queryByText(/You created this Bet|You joined this Bet/)).not.toBeInTheDocument();
     });
 });
