@@ -194,12 +194,45 @@ async function createBet(req, res) {
     }
 }
 
+// GET /api/bets/mine accepts an optional ?limit= (SCRUM-106), so Home can ask for
+// only its few most recent Bets. The raw string is checked before converting it, so
+// values like "2.5", "1e3", " 3", or "03" are rejected instead of partly parsed. A
+// repeated ?limit= arrives as an array and is rejected too.
+const MY_BETS_MAX_LIMIT = 50;
+const WHOLE_NUMBER_PATTERN = /^[1-9]\d*$/;
+
+function parseMyBetsLimit(rawLimit) {
+    if (rawLimit === undefined) {
+        return { valid: true, limit: undefined };
+    }
+    if (typeof rawLimit !== "string" || !WHOLE_NUMBER_PATTERN.test(rawLimit)) {
+        return { valid: false };
+    }
+
+    const limit = Number(rawLimit);
+    if (limit > MY_BETS_MAX_LIMIT) {
+        return { valid: false };
+    }
+    return { valid: true, limit };
+}
+
 // GET /api/bets/mine - requires authMiddleware to have already run and populated req.user.
-// The creator uid comes only from the verified token; any uid/creatorUid in the
-// query, body, or headers is ignored.
+// Returns the Bets the user created or joined (SCRUM-57). The uid comes only from
+// the verified token; any uid/creatorUid in the query, body, or headers is ignored.
 async function listMyBets(req, res) {
+    const { valid, limit } = parseMyBetsLimit(req.query?.limit);
+    if (!valid) {
+        return res.status(400).json({
+            error: "invalid_request",
+            message: `limit must be a whole number between 1 and ${MY_BETS_MAX_LIMIT}.`,
+        });
+    }
+
     try {
-        const bets = await betService.getBetsByCreator(req.user.uid);
+        // Without a limit, the call is exactly the same as before SCRUM-106.
+        const bets = limit === undefined
+            ? await betService.getBetsForUser(req.user.uid)
+            : await betService.getBetsForUser(req.user.uid, limit);
  
         return res.status(200).json({ bets });
     } catch (error) {
