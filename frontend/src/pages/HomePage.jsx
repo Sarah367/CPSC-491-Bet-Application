@@ -1,11 +1,12 @@
 import {useAuth} from "../context/useAuth";
 import {useNavigate, Navigate, Link} from "react-router-dom";
 import {logoutUser} from "../services/authService";
-import {useEffect, useState} from "react";
-import {fetchMyBets} from "../services/betService";
+import {useState} from "react";
+import {useMyBets} from "../hooks/useMyBets";
 import "./HomePage.css";
 
 const RECENT_BETS_LIMIT = 3;
+const RECENT_BETS_ERROR = "Unable to load your recent bets right now. Please try again later.";
 
 function formatDeadline(dateString) {
     const date = new Date(dateString);
@@ -26,50 +27,15 @@ function HomePage() {
     const {currentUser, loading, isAuthenticated} = useAuth();
     const [error,setError] = useState("");
     const navigate = useNavigate();
-    const [recentBets, setRecentBets] = useState([]);
-    const [betsLoading, setBetsLoading] = useState(true);
-    const [betsError, setBetsError] = useState("");
-
-    useEffect(() => {
-        if (!isAuthenticated) {
-            return;
-        }
-
-        // Ignore the response if the page unmounts before it arrives.
-        let cancelled = false;
-
-        async function loadRecentBets() {
-            try {
-                // The server returns only the newest few (SCRUM-106).
-                const bets = await fetchMyBets(RECENT_BETS_LIMIT);
-                if (!cancelled) {
-                    // Safety net: keep the preview at RECENT_BETS_LIMIT even if more come back.
-                    setRecentBets(bets.slice(0, RECENT_BETS_LIMIT));
-                }
-            } catch (err) {
-                console.error("Failed to load recent bets: ", err);
-                if (!cancelled) {
-                    setBetsError("Unable to load your recent bets right now. Please try again later.");
-                }
-            } finally {
-                if (!cancelled) {
-                    setBetsLoading(false);
-                }
-            }
-        }
-
-        loadRecentBets();
-
-        return () => {
-            cancelled = true;
-            // Reset for the next run (for example, logging out and back in while
-            // Home stays mounted), so an earlier error or finished load doesn't stay
-            // on screen. This is done here, not at the start of the effect, because
-            // the react-hooks/set-state-in-effect lint rule doesn't allow that.
-            setBetsLoading(true);
-            setBetsError("");
-        };
-    }, [isAuthenticated]);
+    // Loading the Bets lives in the shared useMyBets hook (SCRUM-105). The server
+    // returns only the newest few (SCRUM-106), and the slice stays as a safety net so
+    // the preview never shows more than RECENT_BETS_LIMIT.
+    const {
+        bets: myBets,
+        loading: betsLoading,
+        error: betsFailed,
+    } = useMyBets({limit: RECENT_BETS_LIMIT, enabled: isAuthenticated});
+    const recentBets = myBets.slice(0, RECENT_BETS_LIMIT);
 
     async function handleLogout() {
         setError("");
@@ -93,8 +59,8 @@ function HomePage() {
     let recentBetsContent;
     if (betsLoading) {
         recentBetsContent = <p className="home-recent-message">Loading your recent bets...</p>;
-    } else if (betsError) {
-        recentBetsContent = <p className="home-recent-message home-recent-error">{betsError}</p>;
+    } else if (betsFailed) {
+        recentBetsContent = <p className="home-recent-message home-recent-error">{RECENT_BETS_ERROR}</p>;
     } else if (recentBets.length === 0) {
         recentBetsContent = (
             <p className="home-recent-message">
