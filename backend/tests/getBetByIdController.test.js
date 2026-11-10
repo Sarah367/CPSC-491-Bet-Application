@@ -1,5 +1,6 @@
 jest.mock("../src/services/betService", () => ({
     getBetById: jest.fn(),
+    getViewerParticipation: jest.fn(),
 }));
 
 const betService = require("../src/services/betService");
@@ -41,6 +42,8 @@ describe("getBetById controller", () => {
 
     beforeEach(() => {
         betService.getBetById.mockReset();
+        betService.getViewerParticipation.mockReset();
+        betService.getViewerParticipation.mockResolvedValue(null);
         res = createRes();
     });
 
@@ -51,7 +54,8 @@ describe("getBetById controller", () => {
         await getBetById(req, res);
 
         expect(res.statusCode).toBe(200);
-        expect(res.body).toEqual({ bet: fakeBet() });
+        expect(res.body).toEqual({ bet: fakeBet(), viewerParticipation: null });
+
         expect(betService.getBetById).toHaveBeenCalledWith("bet-1");
     });
 
@@ -96,5 +100,26 @@ describe("getBetById controller", () => {
         expect(res.body.error).toBe("server_error");
 
         consoleErrorSpy.mockRestore();
+    });
+    it("includes the viewer's participation when they've joined, looked up with the token's uid", async () => {
+        betService.getBetById.mockResolvedValue(fakeBet());
+        betService.getViewerParticipation.mockResolvedValue({ side: "B", role: "participant" });
+ 
+        const req = { params: { id: "bet-1" }, user: { uid: "joiner-uid" } };
+        await getBetById(req, res);
+ 
+        expect(res.statusCode).toBe(200);
+        expect(res.body.viewerParticipation).toEqual({ side: "B", role: "participant" });
+        expect(betService.getViewerParticipation).toHaveBeenCalledWith("bet-1", "joiner-uid");
+    });
+ 
+    it("doesn't look up participation for a private bet it hides with 404", async () => {
+        betService.getBetById.mockResolvedValue(fakeBet({ visibility: "private", creatorUid: "creator-uid" }));
+ 
+        const req = { params: { id: "bet-1" }, user: { uid: "someone-else" } };
+        await getBetById(req, res);
+ 
+        expect(res.statusCode).toBe(404);
+        expect(betService.getViewerParticipation).not.toHaveBeenCalled();
     });
 });

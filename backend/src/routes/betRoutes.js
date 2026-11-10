@@ -1,7 +1,7 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
 const requireVerifiedEmail = require("../middleware/requireVerifiedEmail");
-const { createBet, listMyBets, listPublicBets, getBetById } = require("../controllers/betController");
+const { createBet, listMyBets, listPublicBets, getBetById, joinBet } = require("../controllers/betController");
 const router = express.Router();
 
 // order matters: authenticate first, then check verification, then run the controller.
@@ -13,5 +13,8 @@ router.post("/", authMiddleware, requireVerifiedEmail, createBet);
 router.get("/mine", authMiddleware, listMyBets);
 router.get("/public", authMiddleware, listPublicBets);
 router.get("/:id", authMiddleware, getBetById);
+// Joining requires a verified email, like creating a Bet (the spec requires verification
+// to create or join). Authenticate first, then check verification, then join.
+router.post("/:id/join", authMiddleware, requireVerifiedEmail, joinBet);
 
 module.exports = router;
