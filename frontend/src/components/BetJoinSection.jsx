@@ -21,7 +21,8 @@ function getJoinError(err) {
         return { message: "Verify your email before joining this Bet.", showVerifyLink: true};
     }
     if (status === 404) {
-        return {message: "This Bet is no longer available."};
+        // The Bet was deleted or made private, so joining can't work: hide the form.
+        return {message: "This Bet is no longer available.", hideForm: true};
     }
     if (status === 409) {
         return {
@@ -39,8 +40,10 @@ function getJoinError(err) {
 // - nothing, otherwise
 // onJoined receives the server's response ({bet, viewerParticipation}), which already 
 // contains the updated Bet, so the page can update without a second request.
+// onAlreadyJoined is called when the server says the user already joined (for example,
+// in another tab), so the page can reload the Bet and show their side.
 
-function BetJoinSection({bet, viewerParticipation, uid, emailVerified, onJoined}) {
+function BetJoinSection({bet, viewerParticipation, uid, emailVerified, onJoined, onAlreadyJoined}) {
     const [side, setSide] = useState("");
     const [termsAcknowledged, setTermsAcknowledged] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -93,6 +96,9 @@ function BetJoinSection({bet, viewerParticipation, uid, emailVerified, onJoined}
                 console.error("Failed to join bet: " , err);
             }
             setJoinError(getJoinError(err));
+            if (err?.status === 409 && err?.body?.error === "already_joined") {
+                onAlreadyJoined?.();
+            }
         } finally {
             setSubmitting(false);
         }

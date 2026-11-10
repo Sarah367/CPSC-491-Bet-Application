@@ -1,6 +1,6 @@
 import {vi, describe, it, beforeEach, expect} from "vitest";
-import {render, screen, fireEvent} from "@testing-library/react";
-import {MemoryRouter, Routes, Route} from "react-router-dom";
+import {render, screen, fireEvent, act} from "@testing-library/react";
+import {MemoryRouter, Routes, Route, Link} from "react-router-dom";
 import {useAuth} from "../context/useAuth";
 import {apiGet, ApiError} from "../services/apiClient";
 import {joinBet} from "../services/betService";
@@ -217,5 +217,73 @@ describe("BetDetailsPage: outcomes and joining (SCRUM-88)", () => {
  
         expect(await screen.findByText("This bet doesn't exist.")).toBeInTheDocument();
         expect(screen.queryByRole("button", {name: "Join Bet"})).not.toBeInTheDocument();
+    });
+
+    it("reloads the Bet and shows the user's side when they already joined", async () => {
+        apiGet
+            .mockResolvedValueOnce({bet: joinableBet(), viewerParticipation: null})
+            .mockResolvedValueOnce({
+                bet: joinableBet({participantCount: 2}),
+                viewerParticipation: {side: "B", role: "participant"},
+            });
+        joinBet.mockRejectedValue(new ApiError(409, {error: "already_joined"}));
+
+        renderBetDetailsPage();
+        fireEvent.click(await screen.findByLabelText("No rain"));
+        fireEvent.click(screen.getByLabelText("I understand and agree to the terms of this Bet."));
+        fireEvent.click(screen.getByRole("button", {name: "Join Bet"}));
+
+        expect(await screen.findByText(/You joined this Bet/)).toHaveTextContent("You joined this Bet and picked No rain.");
+        expect(screen.getByText("2", {selector: "dd"})).toBeInTheDocument();
+        expect(apiGet).toHaveBeenCalledTimes(2);
+        expect(apiGet).toHaveBeenLastCalledWith("/bets/bet-1");
+        // It reloads quietly, without the loading screen.
+        expect(screen.queryByText("Loading bet...")).not.toBeInTheDocument();
+    });
+
+    it("ignores a slow join response after the user moves to another Bet", async () => {
+        const betOne = joinableBet({id: "bet-1", title: "Will it rain on Friday?"});
+        const betTwo = joinableBet({id: "bet-2", title: "Will it snow on Saturday?"});
+        apiGet.mockImplementation((path) => Promise.resolve(
+            path === "/bets/bet-2"
+                ? {bet: betTwo, viewerParticipation: null}
+                : {bet: betOne, viewerParticipation: null}
+        ));
+        let finishJoin;
+        joinBet.mockReturnValue(new Promise((resolve) => { finishJoin = resolve; }));
+
+        render(
+            <MemoryRouter initialEntries={["/bets/bet-1"]}>
+                <Routes>
+                    <Route
+                        path="/bets/:betId"
+                        element={<><BetDetailsPage/><Link to="/bets/bet-2">Go to Bet 2</Link></>}
+                    />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        // Join Bet 1, then move to Bet 2 before the join finishes.
+        fireEvent.click(await screen.findByLabelText("Rain"));
+        fireEvent.click(screen.getByLabelText("I understand and agree to the terms of this Bet."));
+        fireEvent.click(screen.getByRole("button", {name: "Join Bet"}));
+        fireEvent.click(screen.getByRole("link", {name: "Go to Bet 2"}));
+        expect(await screen.findByRole("heading", {name: "Will it snow on Saturday?"})).toBeInTheDocument();
+
+        // Bet 1's join finishes late.
+        await act(async () => {
+            finishJoin({
+                message: "Joined bet successfully.",
+                bet: joinableBet({id: "bet-1", title: "Will it rain on Friday?", participantCount: 2}),
+                viewerParticipation: {side: "A", role: "participant"},
+            });
+        });
+
+        // The page still shows Bet 2, not joined, with a fresh form.
+        expect(screen.getByRole("heading", {name: "Will it snow on Saturday?"})).toBeInTheDocument();
+        expect(screen.queryByText(/You joined this Bet/)).not.toBeInTheDocument();
+        expect(screen.getByLabelText("Rain")).not.toBeChecked();
+        expect(screen.getByLabelText("I understand and agree to the terms of this Bet.")).not.toBeChecked();
+        expect(screen.getByRole("button", {name: "Join Bet"})).toBeDisabled();
     });
 });

@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {Navigate, useParams, Link} from "react-router-dom";
 import {useAuth} from "../context/useAuth";
 import {apiGet, ApiError} from "../services/apiClient";
@@ -43,6 +43,13 @@ function BetDetailsPage() {
     const [notFound, setNotFound] = useState(false);
     const [error, setError] = useState("");
 
+    // The Bet the page is showing right now. A join or reload that finishes after the
+    // user has moved to another Bet checks this, so it can't put the old Bet on screen.
+    const betIdRef = useRef(betId);
+    useEffect(() => {
+        betIdRef.current = betId;
+    }, [betId]);
+
     useEffect(() => {
         if (!isAuthenticated) {
             return;
@@ -86,11 +93,31 @@ function BetDetailsPage() {
     }, [isAuthenticated, betId]);
 
     function handleJoined(data) {
-        if (data?.bet) {
-            setBet(data.bet);
+        // Ignore a join that finished after the user moved to another Bet.
+        if (data?.bet?.id !== betIdRef.current) {
+            return;
         }
+        setBet(data.bet);
         setViewerParticipation(data?.viewerParticipation ?? null);
     }
+
+    // Reloads the Bet without the loading screen, for example after the server says the
+    // user already joined (in another tab, or a double submit), so the page shows their
+    // side and the current participant count.
+    async function refreshBet() {
+        const requestedBetId = betIdRef.current;
+        try {
+            const data = await apiGet(`/bets/${requestedBetId}`);
+            if (betIdRef.current === requestedBetId) {
+                setBet(data?.bet ?? null);
+                setViewerParticipation(data?.viewerParticipation ?? null);
+            }
+        } catch (err) {
+            // The "already joined" message stays on screen, so there's nothing else to show.
+            console.error("Failed to reload bet: ", err);
+        }
+    }
+
     if (authLoading) {
         return <p>Loading...</p>;
     }
@@ -163,6 +190,7 @@ function BetDetailsPage() {
                         uid={uid}
                         emailVerified={emailVerified}
                         onJoined={handleJoined}
+                        onAlreadyJoined={refreshBet}
                     />
                 )}
                 <p className="bet-details-back"><Link to="/home">Back to Home</Link></p>

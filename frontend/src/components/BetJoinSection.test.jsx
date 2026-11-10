@@ -183,10 +183,34 @@ describe("BetJoinSection: errors", () => {
         expect(screen.getByRole("link", {name: "Verify Email"})).toHaveAttribute("href", "/verify-email");
     });
 
-    it("shows a friendly message for a 404", async () => {
+    it("shows a friendly message and hides the form for a 404", async () => {
         const alert = await submitWithError(apiError(404, "not_found"));
 
         expect(alert).toHaveTextContent("This Bet is no longer available.");
+        // Every further click would fail the same way, so the form is gone.
+        expect(screen.queryByRole("button", {name: "Join Bet"})).not.toBeInTheDocument();
+    });
+
+    it("asks the page to reload the Bet when the user already joined", async () => {
+        joinBet.mockRejectedValue(apiError(409, "already_joined"));
+        const onAlreadyJoined = vi.fn();
+        renderSection({onAlreadyJoined});
+        fillForm();
+        fireEvent.click(screen.getByRole("button", {name: "Join Bet"}));
+
+        await screen.findByRole("alert");
+        expect(onAlreadyJoined).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(["bet_closed", "creator_cannot_join"])("doesn't ask for a reload for a 409 %s", async (code) => {
+        joinBet.mockRejectedValue(apiError(409, code));
+        const onAlreadyJoined = vi.fn();
+        renderSection({onAlreadyJoined});
+        fillForm();
+        fireEvent.click(screen.getByRole("button", {name: "Join Bet"}));
+
+        await screen.findByRole("alert");
+        expect(onAlreadyJoined).not.toHaveBeenCalled();
     });
 
     it.each([
