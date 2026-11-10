@@ -3,6 +3,7 @@ import {useNavigate, Navigate, Link} from "react-router-dom";
 import {logoutUser} from "../services/authService";
 import {useEffect, useState} from "react";
 import {fetchMyBets} from "../services/betService";
+import {ROLE_LABELS} from "../utils/betRoleLabels";
 import "./HomePage.css";
 
 const RECENT_BETS_LIMIT = 3;
@@ -97,7 +98,7 @@ function HomePage() {
     } else if (recentBets.length === 0) {
         recentBetsContent = (
             <p className="home-recent-message">
-                You haven't created any bets yet. Create a bet to get started!
+                You haven't created or joined any bets yet. Create a bet to get started!
             </p>
         );
     } else {
@@ -106,6 +107,9 @@ function HomePage() {
                 {recentBets.map((bet) => (
                     <li key={bet.id} className="home-recent-item">
                         <h3>{bet.title}</h3>
+                        {ROLE_LABELS[bet.viewerRole] && (
+                            <p className="home-recent-role">{ROLE_LABELS[bet.viewerRole]}</p>
+                        )}
                         <p className="home-recent-meta">
                             <span className="home-recent-status">{bet.status}</span>
                             <span className="home-recent-visibility">{bet.visibility}</span>

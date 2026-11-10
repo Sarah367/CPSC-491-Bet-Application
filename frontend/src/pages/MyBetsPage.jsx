@@ -2,6 +2,7 @@ import {useEffect, useState} from "react";
 import {useAuth} from "../context/useAuth";
 import {Navigate, Link} from "react-router-dom";
 import {apiGet} from "../services/apiClient";
+import {ROLE_LABELS} from "../utils/betRoleLabels";
 
 function formatDeadline(dateString) {
     if (!dateString) {
@@ -38,15 +39,6 @@ function formatStake(bet) {
 
     return bet.stakeDescription ?? "No stake";
 }
-
-
-// GET /api/bets/mine returns Bets the user created or joined, each with a
-// viewerRole from the server (SCRUM-57). Unknown roles show no label.
-const ROLE_LABELS = {
-    creator: "You created this Bet",
-    participant: "You joined this Bet",
-};
-
 
 function MyBetsPage() {
     const {loading, isAuthenticated} = useAuth();

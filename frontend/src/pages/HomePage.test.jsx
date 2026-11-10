@@ -1,5 +1,5 @@
 import {vi, describe, it, beforeEach, expect} from "vitest";
-import {render, screen, fireEvent, waitFor} from "@testing-library/react";
+import {render, screen, fireEvent, waitFor, within} from "@testing-library/react";
 import {MemoryRouter, Routes, Route} from "react-router-dom";
 import {useAuth} from "../context/useAuth";
 import {logoutUser} from "../services/authService";
@@ -178,7 +178,7 @@ describe("HomePage Recent Bets", () => {
 
         renderHomePage();
 
-        await screen.findByText(/You haven't created any bets yet/);
+        await screen.findByText(/You haven't created or joined any bets yet/);
         expect(screen.queryByText("Your bets will show up here soon.")).not.toBeInTheDocument();
     });
 
@@ -237,6 +237,21 @@ describe("HomePage Recent Bets", () => {
         expect(screen.queryByText(/No deadline/)).not.toBeInTheDocument();
     });
 
+    it("labels each Bet as created or joined, like My Bets", async () => {
+        fetchMyBets.mockResolvedValue([
+            fakeBet("1", { viewerRole: "creator" }),
+            fakeBet("2", { viewerRole: "participant" }),
+            fakeBet("3", { viewerRole: "unknown" }),
+        ]);
+
+        renderHomePage();
+
+        const items = await screen.findAllByRole("listitem");
+        expect(within(items[0]).getByText("You created this Bet")).toBeInTheDocument();
+        expect(within(items[1]).getByText("You joined this Bet")).toBeInTheDocument();
+        expect(within(items[2]).queryByText(/You created this Bet|You joined this Bet/)).not.toBeInTheDocument();
+    });
+
     it("shows No deadline when a Bet has no deadline, matching My Bets", async () => {
         fetchMyBets.mockResolvedValue([fakeBet("1", { deadline: undefined })]);
 
@@ -251,7 +266,7 @@ describe("HomePage Recent Bets", () => {
         renderHomePage();
 
         expect(
-            await screen.findByText("You haven't created any bets yet. Create a bet to get started!")
+            await screen.findByText("You haven't created or joined any bets yet. Create a bet to get started!")
         ).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "Create a Bet" })).toHaveAttribute("href", "/bets/create");
     });
