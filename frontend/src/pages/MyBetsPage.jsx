@@ -2,6 +2,7 @@ import {useEffect, useState} from "react";
 import {useAuth} from "../context/useAuth";
 import {Navigate, Link} from "react-router-dom";
 import {apiGet} from "../services/apiClient";
+import {ROLE_LABELS} from "../utils/betRoleLabels";
 
 function formatDeadline(dateString) {
     if (!dateString) {
@@ -93,13 +94,14 @@ function MyBetsPage() {
     } else if (error) {
         content = <p role="alert">{error}</p>;
     } else if (bets.length === 0) {
-        content = <p>You haven't created any bets yet.</p>;
+        content = <p>You haven't created or joined any bets yet.</p>;
     } else {
         content = (
             <ul>
                 {bets.map((bet) => (
                     <li key={bet.id}>
                         <h2><Link to={`/bets/${bet.id}`}>{bet.title}</Link></h2>
+                        {ROLE_LABELS[bet.viewerRole] && <p>{ROLE_LABELS[bet.viewerRole]}</p>}
                         <p><strong>Status:</strong> {bet.status}</p>
                         <p><strong>Visibility:</strong> {bet.visibility}</p>
                         <p><strong>Deadline:</strong> {formatDeadline(bet.deadline)}</p>

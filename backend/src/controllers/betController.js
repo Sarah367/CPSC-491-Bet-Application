@@ -195,11 +195,11 @@ async function createBet(req, res) {
 }
 
 // GET /api/bets/mine - requires authMiddleware to have already run and populated req.user.
-// The creator uid comes only from the verified token; any uid/creatorUid in the
-// query, body, or headers is ignored.
+// Returns the Bets the user created or joined (SCRUM-57). The uid comes only from
+// the verified token; any uid/creatorUid in the query, body, or headers is ignored.
 async function listMyBets(req, res) {
     try {
-        const bets = await betService.getBetsByCreator(req.user.uid);
+        const bets = await betService.getBetsForUser(req.user.uid);
  
         return res.status(200).json({ bets });
     } catch (error) {

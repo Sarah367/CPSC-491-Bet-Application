@@ -1,5 +1,5 @@
 jest.mock("../src/services/betService", () => ({
-    getBetsByCreator: jest.fn(),
+    getBetsForUser: jest.fn(),
 }));
 
 const betService = require("../src/services/betService");
@@ -24,7 +24,7 @@ describe("listMyBets controller", () => {
     let res;
 
     beforeEach(() => {
-        betService.getBetsByCreator.mockReset();
+        betService.getBetsForUser.mockReset();
         res = createRes();
     });
 
@@ -32,19 +32,19 @@ describe("listMyBets controller", () => {
         const fakeBets = [
             { id: "bet-1", title: "Dodgers win Friday?", creatorUid: "real-user-uid" },
         ];
-        betService.getBetsByCreator.mockResolvedValue(fakeBets);
+        betService.getBetsForUser.mockResolvedValue(fakeBets);
 
         const req = { query: {}, body: {}, user: { uid: "real-user-uid" } };
         await listMyBets(req, res);
 
-        expect(betService.getBetsByCreator).toHaveBeenCalledTimes(1);
-        expect(betService.getBetsByCreator).toHaveBeenCalledWith("real-user-uid");
+        expect(betService.getBetsForUser).toHaveBeenCalledTimes(1);
+        expect(betService.getBetsForUser).toHaveBeenCalledWith("real-user-uid");
         expect(res.statusCode).toBe(200);
         expect(res.body).toEqual({ bets: fakeBets });
     });
 
     it("ignores a spoofed uid/creatorUid in the query, body, and headers", async () => {
-        betService.getBetsByCreator.mockResolvedValue([]);
+        betService.getBetsForUser.mockResolvedValue([]);
 
         const req = {
             query: { uid: "spoofed-uid", creatorUid: "spoofed-uid" },
@@ -54,12 +54,12 @@ describe("listMyBets controller", () => {
         };
         await listMyBets(req, res);
 
-        expect(betService.getBetsByCreator).toHaveBeenCalledWith("real-user-uid");
-        expect(betService.getBetsByCreator).not.toHaveBeenCalledWith("spoofed-uid");
+        expect(betService.getBetsForUser).toHaveBeenCalledWith("real-user-uid");
+        expect(betService.getBetsForUser).not.toHaveBeenCalledWith("spoofed-uid");
     });
 
     it("returns 200 with an empty list when the user has no bets", async () => {
-        betService.getBetsByCreator.mockResolvedValue([]);
+        betService.getBetsForUser.mockResolvedValue([]);
 
         const req = { query: {}, body: {}, user: { uid: "real-user-uid" } };
         await listMyBets(req, res);
@@ -69,7 +69,7 @@ describe("listMyBets controller", () => {
     });
 
     it("returns 500 if betService throws unexpectedly", async () => {
-        betService.getBetsByCreator.mockRejectedValue(new Error("Firestore is down"));
+        betService.getBetsForUser.mockRejectedValue(new Error("Firestore is down"));
         const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
         const req = { query: {}, body: {}, user: { uid: "real-user-uid" } };
