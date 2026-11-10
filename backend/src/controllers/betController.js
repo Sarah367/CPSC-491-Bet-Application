@@ -15,6 +15,26 @@ function sendBadRequest(res, message) {
     return res.status(400).json({error: "invalid_request", message});
 }
 
+function sendBetNotFound(res) {
+    return res.status(404).json({
+        error: "not_found",
+        message: "Bet not found.",
+    });
+}
+
+function serializeBetDetails(bet) {
+    return {
+        id: bet.id,
+        title: bet.title,
+        description: bet.description,
+        deadline: bet.deadline,
+        visibility: bet.visibility,
+        resolutionMethod: bet.resolutionMethod,
+        status: bet.status,
+        creatorDisplayName: bet.creatorDisplayName,
+    };
+}
+
 function isBlankString(value) {
     return typeof value !== "string" || value.trim().length === 0;
 }
@@ -236,18 +256,18 @@ async function getBetById(req, res) {
         const bet = await betService.getBetById(req.params.id);
 
         if (!bet) {
-            return res.status(404).json({ error: "not_found" });
+            return sendBetNotFound(res);
         }
 
         if (bet.visibility === BET_VISIBILITY.PRIVATE && bet.creatorUid !== req.user.uid) {
-            return res.status(404).json({ error: "not_found" });
+            return sendBetNotFound(res);
         }
 
         // The current user's side and role if they've joined, or null. Lets the Bet Details
         // page show "You joined on ..." and hide the Join section, even after a refresh.
         const viewerParticipation = await betService.getViewerParticipation(req.params.id, req.user.uid);
  
-        return res.status(200).json({ bet, viewerParticipation });
+        return res.status(200).json({ bet: serializeBetDetails(bet), viewerParticipation });
     } catch (error) {
         console.error("[betController] Failed to load bet: ", error);
         return res.status(500).json({

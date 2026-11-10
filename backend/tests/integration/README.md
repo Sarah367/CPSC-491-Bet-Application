@@ -39,15 +39,16 @@ remove a route, update this table in the same PR.
 |---|---|---|---|---|---|
 | `GET /api/health` | none | `api.integration.test.js` | 200 `{ status: "ok" }`, no token checked | n/a (public) | n/a (no input) |
 | `GET /api/protected` | auth | `api.integration.test.js` | 200 with uid from the token | 401 missing header, 401 rejected token | n/a (no input) |
-| `POST /api/bets` | auth, verified email | `bets.create.integration.test.js`, `auth-verification.integration.test.js` | 201 monetary, 201 non-monetary, trimming, side counts | 401 missing / malformed / rejected token, 401 checked before 403, 403 unverified, 403 claim absent, 403 ignores spoofed body / header verification, 500 Firestore failure without leaking details | 400 for each missing, blank, or non-string required field, duplicate outcomes, invalid enums, `termsAcknowledged`, past deadline, outcome deadline not after deadline, invalid dates, monetary and non-monetary stake rules, malformed JSON, array body, non-JSON body; server-controlled fields ignored |
+| `POST /api/bets` | auth, verified email | `bets.create.integration.test.js`, `auth-verification.integration.test.js`, `api.integration.test.js` | 201 monetary, 201 non-monetary, trimming, side counts | 400 malformed JSON returns generic JSON before authentication, without parser details; 401 missing / malformed / rejected token, 401 checked before 403, 403 unverified, 403 claim absent, 403 ignores spoofed body / header verification, 500 Firestore failure without leaking details | 400 for each missing, blank, or non-string required field, duplicate outcomes, invalid enums, `termsAcknowledged`, past deadline, outcome deadline not after deadline, invalid dates, monetary and non-monetary stake rules, malformed JSON, array body, non-JSON body; server-controlled fields ignored |
 | `GET /api/bets/mine` | auth | `bets.read.integration.test.js` | 200 own Bets incl. private, ISO dates, empty list, newest first | 401 missing / rejected token, 500 Firestore failure without leaking details | spoofed `uid` / `creatorUid` in query, body, and header are ignored |
 | `GET /api/bets/public` | auth | `bets.read.integration.test.js` | 200 public Bets from any creator, only the 7 listing fields, empty list, newest first | 401 missing / rejected token, 500 Firestore failure without leaking details | n/a (no input) |
+| `GET /api/bets/:id` | auth | `bets.details.integration.test.js` | 200 with only Bet Details fields and viewer participation; `participantUids` omitted | 401 missing / rejected token, identical JSON 404 for missing and hidden private Bets, 500 Firestore failure without leaking details | n/a (no input) |
 | unknown routes | none | `api.integration.test.js` | n/a | 404 | n/a |
 
-Not implemented yet, so not tested: Bet Details (`GET /api/bets/:id`, SCRUM-32,
-still on its feature branch), bet editing (SCRUM-36), join / participants,
-lifecycle transitions, outcome resolution / voting, history and stats, payouts,
-and notifications.
+Not implemented yet, so not tested: bet editing (SCRUM-36), lifecycle
+transitions, outcome resolution / voting, history and stats, payouts, and
+notifications. Join / participants are partially implemented and have focused
+tests; their broader lifecycle behavior remains outside this integration suite.
 
 ## Adding tests for a new endpoint
 
@@ -89,13 +90,6 @@ Fixed dates are fine only where the test checks formatting or sorting, as in
 Documented here so they aren't silently omitted. Each should become a Jira
 ticket if the team decides to fix it.
 
-- **Malformed JSON returns HTML, not our JSON error shape.** `express.json()`
-  rejects the body before any route runs, so Express's default error handler sends
-  a 400 HTML page. This also happens before authentication, so an unauthenticated
-  request with bad JSON gets 400 instead of 401. Outside `NODE_ENV=production`,
-  that page includes a stack trace. The test asserts only the 400 status and that
-  nothing reached authentication or Firestore. Fix: add a JSON error-handling
-  middleware in `app.js`, then tighten the test.
 - **Unknown routes return an HTML 404**, not `{ error, message }` JSON. The
   test asserts only the status.
 - **Firestore is mocked, not emulated.** These tests check the HTTP contract and

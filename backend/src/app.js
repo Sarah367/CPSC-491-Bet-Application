@@ -13,4 +13,15 @@ app.use("/api/health", healthRoutes);
 app.use("/api/protected", protectedRoutes);
 app.use("/api/bets", betRoutes);
 
+app.use((error, req, res, next) => {
+    if (error?.type === "entity.parse.failed") {
+        return res.status(400).json({
+            error: "invalid_request",
+            message: "Request body must contain valid JSON.",
+        });
+    }
+
+    return next(error);
+});
+
 module.exports = app;
