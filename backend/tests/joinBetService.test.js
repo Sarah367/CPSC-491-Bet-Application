@@ -117,7 +117,7 @@ describe("joinBet service", () => {
         expect(updates).not.toHaveProperty("sideACount");
     });
  
-    it("does not change the Bet's status (auto-activation is SCRUM-55)", async () => {
+    it("keeps a Draft as a Draft when the joiner picks the creator's side", async () => {
         setUpReads(betData());
  
         await joinBet("bet-1", "joiner-uid", "A");
@@ -214,5 +214,95 @@ describe("getViewerParticipation service", () => {
         mockParticipantGet.mockResolvedValue(snapshot(undefined, false));
  
         await expect(getViewerParticipation("bet-1", "joiner-uid")).resolves.toBeNull();
+    });
+});
+
+describe("joinBet auto-activation (SCRUM-55)", () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockTransaction.get.mockReset();
+        mockBetGet.mockResolvedValue(snapshot(betData({ status: "active", participantCount: 2 })));
+        mockGetUser.mockResolvedValue({ displayName: "Creator" });
+    });
+ 
+    function statusWritten() {
+        return mockTransaction.update.mock.calls[0][1].status;
+    }
+
+    it("activates the Bet when someone joins the creator's opposite side", async () => {
+        setUpReads(betData({ creatorSide: "A", sideACount: 1, sideBCount: 0 }));
+ 
+        await joinBet("bet-1", "joiner-uid", "B");
+ 
+        expect(statusWritten()).toBe("active");
+        // The activation is part of the same update as the join, so it all happens together.
+        expect(mockTransaction.update).toHaveBeenCalledTimes(1);
+        expect(mockTransaction.update.mock.calls[0][1]).toMatchObject({
+            participantCount: FieldValue.increment(1),
+            sideBCount: FieldValue.increment(1),
+            status: "active",
+        });
+    });
+ 
+    it("works the same when the creator is on side B", async () => {
+        setUpReads(betData({ creatorSide: "B", sideACount: 0, sideBCount: 1 }));
+ 
+        await joinBet("bet-1", "joiner-uid", "A");
+ 
+        expect(statusWritten()).toBe("active");
+    });
+
+    it("stays a Draft while everyone is on one side, then activates when the other side gets someone", async () => {
+        // Two people on side A and nobody on B: joining A again keeps it a Draft.
+        setUpReads(betData({ participantCount: 2, sideACount: 2, sideBCount: 0 }));
+        await joinBet("bet-1", "third-uid", "A");
+        expect(statusWritten()).toBeUndefined();
+ 
+        // Now someone joins B, so both sides have someone.
+        jest.clearAllMocks();
+        mockTransaction.get.mockReset();
+        setUpReads(betData({ participantCount: 3, sideACount: 3, sideBCount: 0 }));
+        await joinBet("bet-1", "fourth-uid", "B");
+        expect(statusWritten()).toBe("active");
+    });
+ 
+    it("doesn't change the status when joining a Bet that is already Active", async () => {
+        setUpReads(betData({ status: "active", participantCount: 2, sideACount: 1, sideBCount: 1 }));
+ 
+        await joinBet("bet-1", "joiner-uid", "B");
+ 
+        expect(statusWritten()).toBeUndefined();
+        expect(mockTransaction.update.mock.calls[0][1].sideBCount).toEqual(FieldValue.increment(1));
+    });
+
+    it("activates a Draft that already had both sides filled, on the next join", async () => {
+        setUpReads(betData({ status: "draft", participantCount: 2, sideACount: 1, sideBCount: 1 }));
+ 
+        await joinBet("bet-1", "joiner-uid", "A");
+ 
+        expect(statusWritten()).toBe("active");
+    });
+ 
+    it("stays a Draft for an old Bet that is missing its side counts", async () => {
+        setUpReads(betData({ sideACount: undefined, sideBCount: undefined }));
+ 
+        await joinBet("bet-1", "joiner-uid", "B");
+ 
+        expect(statusWritten()).toBeUndefined();
+    });
+ 
+    it("returns the updated Bet with its new status", async () => {
+        setUpReads(betData({ sideACount: 1, sideBCount: 0 }));
+ 
+        const bet = await joinBet("bet-1", "joiner-uid", "B");
+ 
+        expect(bet.status).toBe("active");
+    });
+ 
+    it("doesn't activate anything when the join is rejected", async () => {
+        setUpReads(betData({ deadline: Timestamp.fromDate(new Date(Date.now() - 1000)), sideBCount: 0 }));
+ 
+        await expect(joinBet("bet-1", "joiner-uid", "B")).rejects.toBeInstanceOf(BetJoinError);
+        expect(mockTransaction.update).not.toHaveBeenCalled();
     });
 });
