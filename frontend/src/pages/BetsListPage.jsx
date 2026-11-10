@@ -59,9 +59,12 @@ function BetsListPage() {
     return (
         <div>
             <h1>Public Bets</h1>
-            {error && <p role="alert">{error}</p>}
+            {/* Only one state shows at a time (SCRUM-85): loading, then an error, an empty message,
+                or the list. Before, a failed request showed both the error and "No public bets yet." */}
             {loading ? (
                 <p>Loading bets...</p>
+            ) : error ? (
+                <p role="alert">{error}</p>
             ) : bets.length === 0 ? (
                 <p>No public bets yet.</p>
             ) : (

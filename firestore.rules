@@ -1,0 +1,51 @@
+rules_version = '2';
+
+// Firestore Security Rules (SCRUM-33)
+//
+// Policy: deny ALL direct client access to Firestore.
+//
+// - Every read and write in this app goes through the Express backend, which
+//   uses the Firebase Admin SDK. The Admin SDK bypasses security rules
+//   entirely, so these rules do not affect the backend at all.
+//
+// - The Firebase web config is public by design: Vite inlines every VITE_*
+//   variable into the frontend bundle, so anyone can read the project ID and
+//   API key and build their own client against this project. These rules are
+//   the backstop that stops such a client from reading or writing data
+//   directly.
+//
+// - The real authorization lives in the backend, not here:
+//     backend/src/middleware/authMiddleware.js        (verifies Firebase ID token, sets req.user)
+//     backend/src/middleware/requireVerifiedEmail.js  (blocks unverified accounts)
+//     backend/src/controllers/betController.js        (private-bet visibility, creator ownership, join conditions)
+//     backend/src/services/betService.js              (serializeBetDoc / serializeBet shape API responses;
+//                                                      SCRUM-98 adds betDetailsSerializer)
+//   That logic is intentionally NOT mirrored here. A second copy in rules
+//   syntax would drift from the backend while guarding an access path nothing
+//   uses.
+//
+// - Firestore grants access if ANY matching rule allows it, so the catch-all
+//   below does not override a more specific allow. A future feature that needs
+//   direct client access (e.g. realtime listeners) must revisit these rules in
+//   its own ticket rather than work around them.
+//
+// Committing this file does nothing on its own. It takes effect only after
+// `firebase deploy --only firestore:rules`. See docs/firestore-security-rules.md.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /bets/{betId} {
+      allow read, write: if false;
+
+      match /participants/{participantUid} {
+        allow read, write: if false;
+      }
+    }
+
+    // Everything else, including collections that don't exist yet.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
