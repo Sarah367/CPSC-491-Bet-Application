@@ -40,15 +40,60 @@
     overflow-wrap: anywhere;
 }
 
-/* Only the title is a link. It reads as a heading, and turns accent-colored with
-   an underline on hover. Keyboard focus uses the global :focus-visible outline. */
-.my-bets-card-title a {
-    color: var(--text);
+/* The whole card opens the Bet's details page, the same way Home's Recent Bets cards
+   do (SCRUM-84). The title is the card's one real link, so keyboard and screen readers
+   work normally, and its ::after stretches over the whole card, so a click anywhere on
+   the card follows that link. */
+.my-bets-card {
+    position: relative;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
-.my-bets-card-title a:hover {
-    color: var(--accent);
-    text-underline-offset: 3px;
+/* The card lifts slightly on hover, to show it's clickable. */
+.my-bets-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* Keyboard users get a clear outline around the whole card. */
+.my-bets-card:has(.my-bets-card-link:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.my-bets-card-link {
+    color: var(--text);
+    text-decoration: none;
+}
+
+/* The whole card shows it's clickable, so the title itself isn't underlined on hover. */
+.my-bets-card-link:hover {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.my-bets-card-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+}
+
+/* The outline is drawn around the card instead. */
+.my-bets-card-link:focus-visible {
+    outline: none;
+}
+
+/* No lift animation for people who've turned down motion in their system settings. */
+@media (prefers-reduced-motion: reduce) {
+    .my-bets-card {
+        transition: none;
+    }
+
+    .my-bets-card:hover {
+        transform: none;
+    }
 }
 
 .my-bets-role {

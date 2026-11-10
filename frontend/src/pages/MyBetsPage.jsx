@@ -75,14 +75,15 @@ function MyBetsPage() {
     } else if (bets.length === 0) {
         content = <p className="my-bets-message">You haven't created or joined any bets yet.</p>;
     } else {
-        // One card per Bet (SCRUM-108): the title links to Bet Details, then the
-        // viewer's role, status and visibility badges, and deadline and stake rows.
+        // One card per Bet (SCRUM-108). The whole card opens Bet Details: the title is
+        // the card's one real link, stretched over the card in CSS. Then the viewer's
+        // role, status and visibility badges, and deadline and stake rows.
         content = (
             <ul className="my-bets-list">
                 {bets.map((bet) => (
                     <li key={bet.id} className="my-bets-card">
                         <h2 className="my-bets-card-title">
-                            <Link to={`/bets/${bet.id}`}>{bet.title}</Link>
+                            <Link to={`/bets/${bet.id}`} className="my-bets-card-link">{bet.title}</Link>
                         </h2>
                         {ROLE_LABELS[bet.viewerRole] && (
                             <p className="my-bets-role">{ROLE_LABELS[bet.viewerRole]}</p>
