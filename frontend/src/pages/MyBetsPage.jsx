@@ -1,6 +1,7 @@
 import {useAuth} from "../context/useAuth";
 import {Navigate, Link} from "react-router-dom";
 import {useMyBets} from "../hooks/useMyBets";
+import "./MyBetsPage.css";
 
 function formatDeadline(dateString) {
     if (!dateString) {
@@ -68,22 +69,38 @@ function MyBetsPage() {
 
     let content;
     if (fetching) {
-        content = <p>Loading your bets...</p>;
+        content = <p className="my-bets-message">Loading your bets...</p>;
     } else if (loadFailed) {
-        content = <p role="alert">{MY_BETS_ERROR}</p>;
+        content = <p className="my-bets-message my-bets-message-error" role="alert">{MY_BETS_ERROR}</p>;
     } else if (bets.length === 0) {
-        content = <p>You haven't created or joined any bets yet.</p>;
+        content = <p className="my-bets-message">You haven't created or joined any bets yet.</p>;
     } else {
+        // One card per Bet (SCRUM-108): the title links to Bet Details, then the
+        // viewer's role, status and visibility badges, and deadline and stake rows.
         content = (
-            <ul>
+            <ul className="my-bets-list">
                 {bets.map((bet) => (
-                    <li key={bet.id}>
-                        <h2><Link to={`/bets/${bet.id}`}>{bet.title}</Link></h2>
-                        {ROLE_LABELS[bet.viewerRole] && <p>{ROLE_LABELS[bet.viewerRole]}</p>}
-                        <p><strong>Status:</strong> {bet.status}</p>
-                        <p><strong>Visibility:</strong> {bet.visibility}</p>
-                        <p><strong>Deadline:</strong> {formatDeadline(bet.deadline)}</p>
-                        <p><strong>Stake:</strong> {formatStake(bet)}</p>
+                    <li key={bet.id} className="my-bets-card">
+                        <h2 className="my-bets-card-title">
+                            <Link to={`/bets/${bet.id}`}>{bet.title}</Link>
+                        </h2>
+                        {ROLE_LABELS[bet.viewerRole] && (
+                            <p className="my-bets-role">{ROLE_LABELS[bet.viewerRole]}</p>
+                        )}
+                        <div className="my-bets-badges">
+                            <span className="my-bets-badge my-bets-badge-status">{bet.status}</span>
+                            <span className="my-bets-badge">{bet.visibility}</span>
+                        </div>
+                        <dl className="my-bets-details">
+                            <div className="my-bets-detail-row">
+                                <dt>Deadline</dt>
+                                <dd>{formatDeadline(bet.deadline)}</dd>
+                            </div>
+                            <div className="my-bets-detail-row">
+                                <dt>Stake</dt>
+                                <dd>{formatStake(bet)}</dd>
+                            </div>
+                        </dl>
                     </li>
                 ))}
             </ul>
@@ -91,10 +108,12 @@ function MyBetsPage() {
     }
 
     return (
-        <div>
-            <h1>My Bets</h1>
-            {content}
-            <p><Link to="/home">Back to Home</Link></p>
+        <div className="my-bets-page">
+            <main className="my-bets-main">
+                <h1 className="my-bets-heading">My Bets</h1>
+                {content}
+                <p className="my-bets-back"><Link to="/home">Back to Home</Link></p>
+            </main>
         </div>
     );
 }

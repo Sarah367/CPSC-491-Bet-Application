@@ -1,0 +1,144 @@
+/* My Bets (SCRUM-108): one card per Bet, matching Home's Recent Bets cards, with
+   deadline and stake in label/value rows like Bet Details. */
+
+.my-bets-page {
+    min-height: 100svh;
+    background: var(--bg);
+}
+
+.my-bets-main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.my-bets-heading {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0 0 20px;
+}
+
+.my-bets-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.my-bets-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 18px 4px;
+}
+
+.my-bets-card-title {
+    font-size: 18px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+/* Only the title is a link. It reads as a heading, and turns accent-colored with
+   an underline on hover. Keyboard focus uses the global :focus-visible outline. */
+.my-bets-card-title a {
+    color: var(--text);
+}
+
+.my-bets-card-title a:hover {
+    color: var(--accent);
+    text-underline-offset: 3px;
+}
+
+.my-bets-role {
+    margin-top: 6px;
+    font-size: 14px;
+}
+
+.my-bets-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.my-bets-badge {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--surface-alt);
+    text-transform: capitalize;
+}
+
+.my-bets-badge-status {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.my-bets-details {
+    margin: 14px 0 0;
+}
+
+.my-bets-detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+}
+
+.my-bets-detail-row dt {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.my-bets-detail-row dd {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+/* Loading, empty, and error messages, styled like Home's. */
+.my-bets-message {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 20px 18px;
+    font-size: 15px;
+}
+
+.my-bets-message-error {
+    border-style: solid;
+    border-color: var(--danger);
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.my-bets-back {
+    margin-top: 24px;
+}
+
+/* Deadline and stake sit side by side when there's room. */
+@media (min-width: 600px) {
+    .my-bets-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .my-bets-main {
+        padding: 28px 16px;
+    }
+
+    .my-bets-heading {
+        font-size: 24px;
+    }
+}
