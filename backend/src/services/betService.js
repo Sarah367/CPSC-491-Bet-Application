@@ -11,6 +11,7 @@ const {
     shouldActivateBet,
 } = require("../models/betModel");
 const { BetJoinError, JOIN_ERROR } = require("../errors/betJoinError");
+const { resolveDisplayName, resolveDisplayNames } = require("./userService");
 async function createBet({
     title,
     description,
@@ -91,25 +92,6 @@ function serializeBetDoc(doc) {
     };
 }
  
-// Looks up the creator's display name via the Admin SDK. This is a network call
-// that can fail for reasons unrelated to the bet (deleted user, auth outage,
-// quota) - any failure falls back to null rather than failing the whole request.
-// Never falls back to email/uid: those aren't exposed by any endpoint today.
-async function resolveCreatorDisplayName(creatorUid) {
-    try {
-        const userRecord = await auth.getUser(creatorUid);
-        return userRecord.displayName ?? null;
-    } catch (error) {
-        console.error("[betService] Failed to look up creator display name: ", error);
-        return null;
-    }
-}
-
-// Returns a single Bet by id, or null if it doesn't exist. Visibility checks
-// (e.g. private bets) are the caller's responsibility, not this function's.
-// Adds creatorDisplayName alongside the existing creatorUid; serializeBetDoc
-// itself is left untouched since other endpoints reuse it and shouldn't start
-// making auth calls.
 async function getBetById(id) {
     const doc = await db.collection(BET_COLLECTION).doc(id).get();
 
@@ -118,7 +100,9 @@ async function getBetById(id) {
     }
 
     const bet = serializeBetDoc(doc);
-    const creatorDisplayName = await resolveCreatorDisplayName(bet.creatorUid);
+    // The creator's profile name, or their Firebase Auth name for older accounts
+    // (SCRUM-87). Never the email or uid, and null when there's no name.
+    const creatorDisplayName = await resolveDisplayName(bet.creatorUid);
 
     return { ...bet, creatorDisplayName };
 }
@@ -162,9 +146,27 @@ async function listPublicBets() {
         .where("visibility", "==", BET_VISIBILITY.PUBLIC)
         .get();
  
-    return snapshot.docs
+    const bets = snapshot.docs
         .map(serializeBet)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Add each creator's display name (SCRUM-87), looked up for all creators at once
+    // instead of once per Bet. null when a creator has no name.
+    const creatorUids = [];
+    for (const bet of bets) {
+        creatorUids.push(bet.creatorUid);
+    }
+    const names = await resolveDisplayNames(creatorUids);
+
+    for (const bet of bets) {
+        let creatorDisplayName = null;
+        if (bet.creatorUid in names) {
+            creatorDisplayName = names[bet.creatorUid];
+        }
+        bet.creatorDisplayName = creatorDisplayName;
+    }
+
+    return bets;
 }
 
 // bets can be joined while they are a Draft or Active 

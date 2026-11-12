@@ -8,6 +8,15 @@ function formatDeadline(deadline) {
     return Number.isNaN(date.getTime()) ? deadline : date.toLocaleString();
 }
 
+// The creator's display name, or "Unknown" when they haven't set one (SCRUM-87).
+// The raw uid is never shown, the same as on Bet Details.
+function creatorName(bet) {
+    if (bet.creatorDisplayName) {
+        return bet.creatorDisplayName;
+    }
+    return "Unknown";
+}
+
 function BetsListPage() {
     const { loading: authLoading, isAuthenticated } = useAuth();
     const [bets, setBets] = useState([]);
@@ -85,7 +94,7 @@ function BetsListPage() {
                                 <td>{formatDeadline(bet.deadline)}</td>
                                 <td>{bet.visibility}</td>
                                 <td>{bet.status}</td>
-                                <td>{bet.creatorUid}</td>
+                                <td>{creatorName(bet)}</td>
                             </tr>
                         ))}
                     </tbody>

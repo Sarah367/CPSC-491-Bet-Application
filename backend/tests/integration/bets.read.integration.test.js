@@ -17,16 +17,26 @@ const { Timestamp } = require("firebase-admin/firestore");
 
 const mockGet = jest.fn();
 const mockWhere = jest.fn(() => ({ get: mockGet }));
-const mockCollection = jest.fn(() => ({ where: mockWhere }));
+const mockCollection = jest.fn(() => ({ where: mockWhere, doc: (uid) => ({ id: uid }) }));
+// SCRUM-87: Public Bets looks up creator names with one profile read (db.getAll)
+// and one Firebase Auth lookup (auth.getUsers) for creators without a profile.
+const mockGetAll = jest.fn();
+const mockGetUsers = jest.fn();
 
 jest.mock("../../src/config/firebaseAdmin", () => ({
     auth: {
         verifyIdToken: jest.fn(),
+        getUsers: (...args) => mockGetUsers(...args),
     },
     db: {
         collection: (...args) => mockCollection(...args),
+        getAll: (...args) => mockGetAll(...args),
     },
 }));
+
+// Profiles and Firebase Auth names for the tests: uid -> name.
+let mockProfileNames = {};
+let mockAuthNames = {};
 
 const request = require("supertest");
 const app = require("../../src/app");
@@ -84,6 +94,30 @@ beforeEach(() => {
     jest.clearAllMocks();
     auth.verifyIdToken.mockResolvedValue({ uid: TOKEN_UID, email_verified: true });
     returnDocs([]);
+
+    mockProfileNames = {};
+    mockAuthNames = {};
+    mockGetAll.mockImplementation((...refs) => {
+        const docs = [];
+        for (const ref of refs) {
+            if (ref.id in mockProfileNames) {
+                const name = mockProfileNames[ref.id];
+                docs.push({ id: ref.id, exists: true, data: () => ({ displayName: name }) });
+            } else {
+                docs.push({ id: ref.id, exists: false });
+            }
+        }
+        return Promise.resolve(docs);
+    });
+    mockGetUsers.mockImplementation((identifiers) => {
+        const users = [];
+        for (const identifier of identifiers) {
+            if (identifier.uid in mockAuthNames) {
+                users.push({ uid: identifier.uid, displayName: mockAuthNames[identifier.uid] });
+            }
+        }
+        return Promise.resolve({ users: users, notFound: [] });
+    });
 });
 
 describe("GET /api/bets/mine (My Bets integration)", () => {
@@ -204,7 +238,17 @@ describe("GET /api/bets/mine (My Bets integration)", () => {
 });
 
 describe("GET /api/bets/public (public Bet listing integration)", () => {
-    const PUBLIC_FIELDS = ["createdAt", "creatorUid", "deadline", "id", "status", "title", "visibility"];
+    // SCRUM-87 added creatorDisplayName, so the page can show names instead of uids.
+    const PUBLIC_FIELDS = [
+        "createdAt",
+        "creatorDisplayName",
+        "creatorUid",
+        "deadline",
+        "id",
+        "status",
+        "title",
+        "visibility",
+    ];
 
     describe("authentication (401)", () => {
         it("returns 401 when the Authorization header is missing", async () => {
@@ -251,8 +295,9 @@ describe("GET /api/bets/public (public Bet listing integration)", () => {
             expect(res.body.bets.map((bet) => bet.creatorUid)).toEqual([TOKEN_UID, OTHER_UID]);
         });
 
-        it("returns only the 7 public listing fields, with dates as ISO strings", async () => {
+        it("returns only the 8 public listing fields, with dates as ISO strings", async () => {
             returnDocs([makeBetDoc("bet-1", betData())]);
+            mockProfileNames[TOKEN_UID] = "Jordan Rivera";
 
             const res = await getAsUser("/api/bets/public");
 
@@ -266,7 +311,52 @@ describe("GET /api/bets/public (public Bet listing integration)", () => {
                 status: "draft",
                 creatorUid: TOKEN_UID,
                 createdAt: "2026-10-08T10:00:00.000Z",
+                creatorDisplayName: "Jordan Rivera",
             });
+        });
+
+        // SCRUM-87
+        it("uses profile names first, Firebase Auth names for older accounts, and null otherwise", async () => {
+            returnDocs([
+                makeBetDoc("bet-1", betData({ creatorUid: "with-profile" })),
+                makeBetDoc("bet-2", betData({ creatorUid: "with-profile" })),
+                makeBetDoc("bet-3", betData({ creatorUid: "older-account" })),
+                makeBetDoc("bet-4", betData({ creatorUid: "no-name" })),
+            ]);
+            mockProfileNames["with-profile"] = "Jordan Rivera";
+            mockAuthNames["with-profile"] = "Old Auth Name";
+            mockAuthNames["older-account"] = "Sam Lee";
+
+            const res = await getAsUser("/api/bets/public");
+
+            expect(res.status).toBe(200);
+            const namesByBet = {};
+            for (const bet of res.body.bets) {
+                namesByBet[bet.id] = bet.creatorDisplayName;
+            }
+            expect(namesByBet).toEqual({
+                "bet-1": "Jordan Rivera",
+                "bet-2": "Jordan Rivera",
+                "bet-3": "Sam Lee",
+                "bet-4": null,
+            });
+            // One profile read for the 3 creators, and one Auth lookup for the 2 without a profile.
+            expect(mockGetAll).toHaveBeenCalledTimes(1);
+            expect(mockGetUsers).toHaveBeenCalledTimes(1);
+            expect(mockGetUsers).toHaveBeenCalledWith([{ uid: "older-account" }, { uid: "no-name" }]);
+        });
+
+        it("still returns the Bets, with null names, when the name lookups fail", async () => {
+            returnDocs([makeBetDoc("bet-1", betData())]);
+            mockGetAll.mockRejectedValue(new Error("Firestore unavailable"));
+            mockGetUsers.mockRejectedValue(new Error("Auth unavailable"));
+            const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+            const res = await getAsUser("/api/bets/public");
+
+            expect(res.status).toBe(200);
+            expect(res.body.bets[0].creatorDisplayName).toBeNull();
+            consoleSpy.mockRestore();
         });
 
         it("does not expose stake details, participants, or other internal fields", async () => {
