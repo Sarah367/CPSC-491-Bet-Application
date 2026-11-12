@@ -94,6 +94,8 @@ function ProfilePage() {
                                 <label htmlFor="display-name">Display name</label>
                                 <input
                                     id="display-name"
+                                    // The backend allows up to 50 characters (SCRUM-87).
+                                    maxLength={50}
                                     value={draftName}
                                     onChange={(event) => setDraftName(event.target.value)}
                                     disabled={isSaving}

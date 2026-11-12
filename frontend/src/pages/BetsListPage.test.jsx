@@ -64,14 +64,28 @@ describe("BetsListPage", () => {
     });
 
     it("renders public bets with title, deadline, visibility, status, and creator", async () => {
-        fetchPublicBets.mockResolvedValue([fakeBet()]);
+        fetchPublicBets.mockResolvedValue([fakeBet({creatorDisplayName: "Jordan Rivera"})]);
 
         renderPage();
 
         expect(await screen.findByText("Will the Dodgers win on Friday?")).toBeInTheDocument();
         expect(screen.getByText("public")).toBeInTheDocument();
         expect(screen.getByText("active")).toBeInTheDocument();
-        expect(screen.getByText("creator-uid")).toBeInTheDocument();
+        // SCRUM-87: the creator's name, never their raw uid.
+        expect(screen.getByText("Jordan Rivera")).toBeInTheDocument();
+        expect(screen.queryByText("creator-uid")).not.toBeInTheDocument();
+    });
+
+    it.each([
+        ["null", null],
+        ["missing", undefined],
+    ])("shows Unknown when the creator's name is %s, not their uid", async (_label, creatorDisplayName) => {
+        fetchPublicBets.mockResolvedValue([fakeBet({creatorDisplayName})]);
+
+        renderPage();
+
+        expect(await screen.findByText("Unknown")).toBeInTheDocument();
+        expect(screen.queryByText("creator-uid")).not.toBeInTheDocument();
     });
 
     it("shows an empty state when there are no public bets", async () => {
