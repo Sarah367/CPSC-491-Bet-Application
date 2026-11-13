@@ -3,24 +3,10 @@ import {useNavigate, Navigate, Link} from "react-router-dom";
 import {logoutUser} from "../services/authService";
 import {useEffect, useState} from "react";
 import {fetchMyBets} from "../services/betService";
+import {formatDeadline} from "../utils/formatDeadline";
 import "./HomePage.css";
 
 const RECENT_BETS_LIMIT = 3;
-
-function formatDeadline(dateString) {
-    const date = new Date(dateString);
-    if (!dateString || Number.isNaN(date.getTime())) {
-        return "No deadline";
-    }
-
-    return date.toLocaleString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-    });
-}
 
 function HomePage() {
     const {currentUser, loading, isAuthenticated} = useAuth();

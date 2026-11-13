@@ -4,31 +4,13 @@ import {useAuth} from "../context/useAuth";
 import {apiGet, ApiError} from "../services/apiClient";
 import BetJoinSection from "../components/BetJoinSection";
 import {outcomeForSide} from "../utils/betJoinEligibility";
+import {formatDeadline} from "../utils/formatDeadline";
 import "./BetDetailsPage.css";
 
 const RESOLUTION_METHOD_LABELS = {
     external: "External data",
     personal: "Personal confirmation",
 };
-
-function formatDeadline(dateString) {
-    if (!dateString) {
-        return "No deadline";
-    }
-
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) {
-        return "No deadline";
-    }
-
-    return date.toLocaleString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-    });
-}
 
 function formatResolutionMethod(resolutionMethod) {
     return RESOLUTION_METHOD_LABELS[resolutionMethod] ?? resolutionMethod ?? "Unknown";

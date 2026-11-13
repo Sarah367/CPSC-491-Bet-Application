@@ -74,6 +74,28 @@ describe("BetsListPage", () => {
         expect(screen.getByText("creator-uid")).toBeInTheDocument();
     });
 
+    // SCRUM-103: Public Bets uses the shared formatDeadline, so a missing or invalid
+    // deadline shows "No deadline" instead of a blank cell or the raw value.
+    it.each([
+        ["missing", undefined],
+        ["invalid", "not a date"],
+    ])("shows No deadline when a Bet's deadline is %s", async (_label, deadline) => {
+        fetchPublicBets.mockResolvedValue([fakeBet({deadline})]);
+
+        renderPage();
+
+        expect(await screen.findByText("No deadline")).toBeInTheDocument();
+        expect(screen.queryByText("not a date")).not.toBeInTheDocument();
+    });
+
+    it("shows the deadline with the full month name, like the other Bet pages", async () => {
+        fetchPublicBets.mockResolvedValue([fakeBet({deadline: "2026-11-15T12:00:00.000Z"})]);
+
+        renderPage();
+
+        expect(await screen.findByText(/November 15, 2026/)).toBeInTheDocument();
+    });
+
     it("shows an empty state when there are no public bets", async () => {
         fetchPublicBets.mockResolvedValue([]);
 
