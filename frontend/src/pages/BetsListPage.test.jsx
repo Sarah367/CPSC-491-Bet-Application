@@ -1,5 +1,5 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { fetchPublicBets } from "../services/betService";
@@ -63,13 +63,12 @@ describe("BetsListPage", () => {
         expect(screen.getByText("Login Page")).toBeInTheDocument();
     });
 
-    it("renders public bets with title, deadline, visibility, status, and creator", async () => {
+    it("renders public bets with title, deadline, status, and creator", async () => {
         fetchPublicBets.mockResolvedValue([fakeBet({creatorDisplayName: "Jordan Rivera"})]);
 
         renderPage();
 
         expect(await screen.findByText("Will the Dodgers win on Friday?")).toBeInTheDocument();
-        expect(screen.getByText("public")).toBeInTheDocument();
         expect(screen.getByText("active")).toBeInTheDocument();
         // SCRUM-87: the creator's name, never their raw uid.
         expect(screen.getByText("Jordan Rivera")).toBeInTheDocument();
@@ -128,14 +127,14 @@ describe("BetsListPage", () => {
         );
     });
 
-    it("doesn't also show the empty message or a table when the fetch fails", async () => {
+    it("doesn't also show the empty message or a list when the fetch fails", async () => {
         fetchPublicBets.mockRejectedValue(new Error("network error"));
 
         renderPage();
 
         await screen.findByRole("alert");
         expect(screen.queryByText("No public bets yet.")).not.toBeInTheDocument();
-        expect(screen.queryByRole("table")).not.toBeInTheDocument();
+        expect(screen.queryByRole("list")).not.toBeInTheDocument();
     });
 
     it("doesn't show an error with the empty message when there are no bets", async () => {
@@ -155,7 +154,7 @@ describe("BetsListPage", () => {
         expect(await screen.findByText("Loading bets...")).toBeInTheDocument();
         expect(screen.queryByText("No public bets yet.")).not.toBeInTheDocument();
         expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-        expect(screen.queryByRole("table")).not.toBeInTheDocument();
+        expect(screen.queryByRole("list")).not.toBeInTheDocument();
     });
 
     it("shows the list without an error when the fetch succeeds", async () => {
@@ -163,12 +162,58 @@ describe("BetsListPage", () => {
 
         renderPage();
 
-        expect(await screen.findByRole("table")).toBeInTheDocument();
+        expect(await screen.findByRole("list")).toBeInTheDocument();
         expect(screen.queryByRole("alert")).not.toBeInTheDocument();
         expect(screen.queryByText("No public bets yet.")).not.toBeInTheDocument();
     });
 
 
+    // SCRUM-109: one card per Bet, in a list, each opening its details page.
+    it("shows one card per Bet, each with its own title, status, and deadline", async () => {
+        fetchPublicBets.mockResolvedValue([
+            fakeBet({id: "bet-1", title: "First Bet", status: "draft", deadline: "2026-11-15T12:00:00.000Z"}),
+            fakeBet({id: "bet-2", title: "Second Bet", status: "active", deadline: "2026-12-20T12:00:00.000Z"}),
+        ]);
+
+        renderPage();
+
+        const items = await screen.findAllByRole("listitem");
+        expect(items).toHaveLength(2);
+        expect(within(items[0]).getByText("First Bet")).toBeInTheDocument();
+        expect(within(items[0]).getByText("draft")).toBeInTheDocument();
+        expect(within(items[0]).getByText(/November 15, 2026/)).toBeInTheDocument();
+        expect(within(items[1]).getByText("Second Bet")).toBeInTheDocument();
+        expect(within(items[1]).getByText("active")).toBeInTheDocument();
+        expect(within(items[1]).getByText(/December 20, 2026/)).toBeInTheDocument();
+    });
+
+    it("links each card's title to that Bet's details page", async () => {
+        fetchPublicBets.mockResolvedValue([fakeBet({id: "bet-42", title: "Linked Bet"})]);
+
+        renderPage();
+
+        const link = await screen.findByRole("link", {name: "Linked Bet"});
+        expect(link).toHaveAttribute("href", "/bets/bet-42");
+    });
+
+    it("labels the deadline and creator on each card", async () => {
+        fetchPublicBets.mockResolvedValue([fakeBet({creatorDisplayName: "Jordan Rivera"})]);
+
+        renderPage();
+
+        const card = await screen.findByRole("listitem");
+        expect(within(card).getByText("Deadline")).toBeInTheDocument();
+        expect(within(card).getByText("Creator")).toBeInTheDocument();
+    });
+
+    it("has a link back to Home", async () => {
+        fetchPublicBets.mockResolvedValue([]);
+
+        renderPage();
+
+        await screen.findByText("No public bets yet.");
+        expect(screen.getByRole("link", {name: "Back to Home"})).toHaveAttribute("href", "/home");
+    });
 
     it("fetches public bets only once auth resolves", async () => {
         fetchPublicBets.mockResolvedValue([fakeBet()]);
