@@ -2,10 +2,16 @@ import { useEffect, useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { fetchPublicBets } from "../services/betService";
+import { formatDeadline } from "../utils/formatDeadline";
+import "./BetsListPage.css";
 
-function formatDeadline(deadline) {
-    const date = new Date(deadline);
-    return Number.isNaN(date.getTime()) ? deadline : date.toLocaleString();
+// The creator's display name, or "Unknown" when they haven't set one (SCRUM-87).
+// The raw uid is never shown, the same as on Bet Details.
+function creatorName(bet) {
+    if (bet.creatorDisplayName) {
+        return bet.creatorDisplayName;
+    }
+    return "Unknown";
 }
 
 function BetsListPage() {
@@ -57,41 +63,70 @@ function BetsListPage() {
     }
 
     return (
-        <div>
-            <h1>Public Bets</h1>
-            {/* Only one state shows at a time (SCRUM-85): loading, then an error, an empty message,
-                or the list. Before, a failed request showed both the error and "No public bets yet." */}
-            {loading ? (
-                <p>Loading bets...</p>
-            ) : error ? (
-                <p role="alert">{error}</p>
-            ) : bets.length === 0 ? (
-                <p>No public bets yet.</p>
-            ) : (
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Title</th>
-                            <th>Deadline</th>
-                            <th>Visibility</th>
-                            <th>Status</th>
-                            <th>Creator</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {bets.map((bet) => (
-                            <tr key={bet.id}>
-                                <td><Link to={`/bets/${bet.id}`}>{bet.title}</Link></td>
-                                <td>{formatDeadline(bet.deadline)}</td>
-                                <td>{bet.visibility}</td>
-                                <td>{bet.status}</td>
-                                <td>{bet.creatorUid}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
+        <div className="public-bets-page">
+            <main className="public-bets-main">
+                <p className="public-bets-back">
+                    <Link to="/home">Back to Home</Link>
+                </p>
+                <h1 className="public-bets-heading">Public Bets</h1>
+                <p className="public-bets-subtitle">Bets anyone can see. Open one to view its details or join.</p>
+                {renderContent(loading, error, bets)}
+            </main>
         </div>
+    );
+}
+
+// Only one state shows at a time (SCRUM-85): loading, then an error, an empty
+// message, or the list.
+function renderContent(loading, error, bets) {
+    if (loading) {
+        return <p className="public-bets-message">Loading bets...</p>;
+    }
+
+    if (error) {
+        return (
+            <p className="public-bets-message public-bets-error" role="alert">
+                {error}
+            </p>
+        );
+    }
+
+    if (bets.length === 0) {
+        return <p className="public-bets-message">No public bets yet.</p>;
+    }
+
+    const cards = [];
+    for (const bet of bets) {
+        cards.push(<BetCard key={bet.id} bet={bet} />);
+    }
+
+    return <ul className="public-bets-list">{cards}</ul>;
+}
+
+// One Bet. The title links to its details page, and the link covers the whole card.
+// Every Bet on this page is public, so the card doesn't repeat a visibility badge.
+function BetCard({ bet }) {
+    return (
+        <li className="public-bets-card">
+            <h2 className="public-bets-card-title">
+                <Link className="public-bets-card-link" to={`/bets/${bet.id}`}>
+                    {bet.title}
+                </Link>
+            </h2>
+            <div className="public-bets-badges">
+                <span className="public-bets-badge public-bets-badge-status">{bet.status}</span>
+            </div>
+            <dl className="public-bets-details">
+                <div className="public-bets-detail-row">
+                    <dt>Deadline</dt>
+                    <dd>{formatDeadline(bet.deadline)}</dd>
+                </div>
+                <div className="public-bets-detail-row">
+                    <dt>Creator</dt>
+                    <dd>{creatorName(bet)}</dd>
+                </div>
+            </dl>
+        </li>
     );
 }
 

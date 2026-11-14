@@ -1,0 +1,181 @@
+/* Public Bets (SCRUM-109): one card per Bet, matching the My Bets cards (SCRUM-108)
+   and Home's Recent Bets, with the deadline and creator in label/value rows like
+   Bet Details. */
+
+.public-bets-page {
+    min-height: 100svh;
+    background: var(--bg);
+}
+
+.public-bets-main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.public-bets-heading {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0;
+}
+
+.public-bets-subtitle {
+    margin: 6px 0 20px;
+    font-size: 15px;
+    color: var(--text-muted);
+}
+
+/* Loading, error, and empty messages sit in a card the same size as a Bet card,
+   so the page doesn't jump around when the list arrives. */
+.public-bets-message {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin: 0;
+    color: var(--text-muted);
+}
+
+.public-bets-error {
+    color: var(--danger);
+    background: var(--danger-bg);
+    border-color: var(--danger);
+}
+
+.public-bets-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.public-bets-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 18px 4px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* The card lifts slightly on hover, to show it's clickable. */
+.public-bets-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* Keyboard users get a clear outline around the whole card. */
+.public-bets-card:has(.public-bets-card-link:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.public-bets-card-title {
+    font-size: 18px;
+    line-height: 1.35;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+/* The title is the card's one real link, so keyboards and screen readers work
+   normally. Its ::after stretches over the whole card, so a click anywhere on the
+   card opens the Bet. */
+.public-bets-card-link {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.public-bets-card-link:hover {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.public-bets-card-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+}
+
+/* The outline is drawn around the card instead. */
+.public-bets-card-link:focus-visible {
+    outline: none;
+}
+
+.public-bets-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.public-bets-badge {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--surface-alt);
+    text-transform: capitalize;
+}
+
+.public-bets-badge-status {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.public-bets-details {
+    margin: 14px 0 0;
+}
+
+.public-bets-detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+}
+
+.public-bets-detail-row dt {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.public-bets-detail-row dd {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+/* Back to Home sits at the top, above the heading. */
+.public-bets-back {
+    margin: 0 0 16px;
+}
+
+/* On wider screens, the deadline and creator sit side by side. */
+@media (min-width: 600px) {
+    .public-bets-details {
+        display: flex;
+    }
+
+    .public-bets-detail-row {
+        flex: 1;
+    }
+}
+
+/* No lift animation for people who've turned down motion in their system settings. */
+@media (prefers-reduced-motion: reduce) {
+    .public-bets-card {
+        transition: none;
+    }
+
+    .public-bets-card:hover {
+        transform: none;
+    }
+}
