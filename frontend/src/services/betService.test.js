@@ -30,6 +30,14 @@ describe("fetchMyBets", () => {
         expect(result).toEqual([]);
     });
 
+    it("adds the limit to the URL when one is given", async () => {
+        apiGet.mockResolvedValueOnce({ bets: [] });
+
+        await fetchMyBets(3);
+
+        expect(apiGet).toHaveBeenCalledWith("/bets/mine?limit=3");
+    });
+
     it("passes errors through so the page can show its error message", async () => {
         apiGet.mockRejectedValueOnce(new Error("network error"));
 

@@ -1,0 +1,189 @@
+/* My Bets (SCRUM-108): one card per Bet, matching Home's Recent Bets cards, with
+   deadline and stake in label/value rows like Bet Details. */
+
+.my-bets-page {
+    min-height: 100svh;
+    background: var(--bg);
+}
+
+.my-bets-main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.my-bets-heading {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0 0 20px;
+}
+
+.my-bets-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.my-bets-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 18px 4px;
+}
+
+.my-bets-card-title {
+    font-size: 18px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+/* The whole card opens the Bet's details page, the same way Home's Recent Bets cards
+   do (SCRUM-84). The title is the card's one real link, so keyboard and screen readers
+   work normally, and its ::after stretches over the whole card, so a click anywhere on
+   the card follows that link. */
+.my-bets-card {
+    position: relative;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* The card lifts slightly on hover, to show it's clickable. */
+.my-bets-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* Keyboard users get a clear outline around the whole card. */
+.my-bets-card:has(.my-bets-card-link:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.my-bets-card-link {
+    color: var(--text);
+    text-decoration: none;
+}
+
+/* The whole card shows it's clickable, so the title itself isn't underlined on hover. */
+.my-bets-card-link:hover {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.my-bets-card-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+}
+
+/* The outline is drawn around the card instead. */
+.my-bets-card-link:focus-visible {
+    outline: none;
+}
+
+/* No lift animation for people who've turned down motion in their system settings. */
+@media (prefers-reduced-motion: reduce) {
+    .my-bets-card {
+        transition: none;
+    }
+
+    .my-bets-card:hover {
+        transform: none;
+    }
+}
+
+.my-bets-role {
+    margin-top: 6px;
+    font-size: 14px;
+}
+
+.my-bets-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.my-bets-badge {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--surface-alt);
+    text-transform: capitalize;
+}
+
+.my-bets-badge-status {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.my-bets-details {
+    margin: 14px 0 0;
+}
+
+.my-bets-detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+}
+
+.my-bets-detail-row dt {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.my-bets-detail-row dd {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+/* Loading, empty, and error messages, styled like Home's. */
+.my-bets-message {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 20px 18px;
+    font-size: 15px;
+}
+
+.my-bets-message-error {
+    border-style: solid;
+    border-color: var(--danger);
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.my-bets-back {
+    margin-top: 24px;
+}
+
+/* Deadline and stake sit side by side when there's room. */
+@media (min-width: 600px) {
+    .my-bets-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .my-bets-main {
+        padding: 28px 16px;
+    }
+
+    .my-bets-heading {
+        font-size: 24px;
+    }
+}

@@ -178,7 +178,7 @@ describe("HomePage Recent Bets", () => {
 
         renderHomePage();
 
-        await screen.findByText(/You haven't created any bets yet/);
+        await screen.findByText(/You haven't created or joined any bets yet/);
         expect(screen.queryByText("Your bets will show up here soon.")).not.toBeInTheDocument();
     });
 
@@ -199,6 +199,8 @@ describe("HomePage Recent Bets", () => {
         const titles = await screen.findAllByRole("heading", { level: 3 });
         expect(titles.map((title) => title.textContent)).toEqual(["Bet 1", "Bet 2", "Bet 3"]);
         expect(fetchMyBets).toHaveBeenCalledTimes(1);
+        // Home asks the server for only 3 Bets (SCRUM-106).
+        expect(fetchMyBets).toHaveBeenCalledWith(3);
     });
 
     it("shows only the first 3 Bets when the API returns more", async () => {
@@ -251,7 +253,7 @@ describe("HomePage Recent Bets", () => {
         renderHomePage();
 
         expect(
-            await screen.findByText("You haven't created any bets yet. Create a bet to get started!")
+            await screen.findByText("You haven't created or joined any bets yet. Create a bet to get started!")
         ).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "Create a Bet" })).toHaveAttribute("href", "/bets/create");
     });

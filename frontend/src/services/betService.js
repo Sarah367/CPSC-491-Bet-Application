@@ -6,8 +6,13 @@ export async function fetchPublicBets() {
     return data.bets;
 }
 
-export async function fetchMyBets() {
-    const data = await apiGet("/bets/mine");
+// Fetches the Bets the user created or joined, newest first. Pass a limit to get only
+// the newest few (SCRUM-106); with no limit, it returns all of them.
+export async function fetchMyBets(limit) {
+    const path = limit === undefined
+        ? "/bets/mine"
+        : `/bets/mine?limit=${encodeURIComponent(limit)}`;
+    const data = await apiGet(path);
     return data?.bets ?? [];
 }
 
