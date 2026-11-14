@@ -2,11 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { fetchPublicBets } from "../services/betService";
-
-function formatDeadline(deadline) {
-    const date = new Date(deadline);
-    return Number.isNaN(date.getTime()) ? deadline : date.toLocaleString();
-}
+import { formatDeadline } from "../utils/formatDeadline";
 
 // The creator's display name, or "Unknown" when they haven't set one (SCRUM-87).
 // The raw uid is never shown, the same as on Bet Details.

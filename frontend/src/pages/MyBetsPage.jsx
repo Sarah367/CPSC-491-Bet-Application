@@ -2,25 +2,7 @@ import {useEffect, useState} from "react";
 import {useAuth} from "../context/useAuth";
 import {Navigate, Link} from "react-router-dom";
 import {apiGet} from "../services/apiClient";
-
-function formatDeadline(dateString) {
-    if (!dateString) {
-        return "No deadline";
-    }
-
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) {
-        return "No deadline";
-    }
-
-    return date.toLocaleString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-    });
-}
+import {formatDeadline} from "../utils/formatDeadline";
 
 function formatStake(bet) {
     if (bet.stakeType === "monetary") {
