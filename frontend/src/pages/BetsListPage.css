@@ -153,8 +153,9 @@
     overflow-wrap: anywhere;
 }
 
+/* Back to Home sits at the top, above the heading. */
 .public-bets-back {
-    margin: 20px 0 0;
+    margin: 0 0 16px;
 }
 
 /* On wider screens, the deadline and creator sit side by side. */

@@ -65,12 +65,12 @@ function BetsListPage() {
     return (
         <div className="public-bets-page">
             <main className="public-bets-main">
-                <h1 className="public-bets-heading">Public Bets</h1>
-                <p className="public-bets-subtitle">Bets anyone can see. Open one to view its details or join.</p>
-                {renderContent(loading, error, bets)}
                 <p className="public-bets-back">
                     <Link to="/home">Back to Home</Link>
                 </p>
+                <h1 className="public-bets-heading">Public Bets</h1>
+                <p className="public-bets-subtitle">Bets anyone can see. Open one to view its details or join.</p>
+                {renderContent(loading, error, bets)}
             </main>
         </div>
     );
