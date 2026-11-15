@@ -9,11 +9,14 @@ import CreateBetPage from './pages/CreateBetPage';
 import BetDetailsPage from './pages/BetDetailsPage';
 import './App.css'
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import RootRedirect from './pages/RootRedirect';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<RootRedirect/>} />
         <Route path="/login" element={<LoginPage/>} />
         <Route path="/register" element={<RegisterPage/>} />
         <Route path="/home" element={<HomePage/>}/>
@@ -23,6 +26,8 @@ function App() {
         <Route path="/bets/create" element={<CreateBetPage/>}/>
         <Route path="/bets/:betId" element={<BetDetailsPage/>}/>
         <Route path="/verify-email" element={<VerifyEmailPage/>}/>
+        {/* Any other address shows Page not found (SCRUM-110). */}
+        <Route path="*" element={<NotFoundPage/>}/>
       </Routes>
     </BrowserRouter>
   );
