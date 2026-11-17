@@ -145,4 +145,107 @@ describe("RegisterPage", () => {
         expect(mockNavigate).not.toHaveBeenCalled();
     })
 
+    it("shows an error when email is empty, without calling registerUser", async () => {
+        const user = userEvent.setup();
+        renderPage();
+
+        await user.type(screen.getByLabelText("Password"), "password123");
+        await user.type(screen.getByLabelText("Confirm Password"), "password123");
+        await user.click(screen.getByRole("button", {name: /register/i}));
+
+        expect(screen.getByText("Email is required.")).toBeInTheDocument();
+        expect(registerUser).not.toHaveBeenCalled();
+        expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it("shows an error when password is empty, without calling registerUser", async () => {
+        const user = userEvent.setup();
+        renderPage();
+
+        await user.type(screen.getByLabelText("Email"), "test@example.com");
+        await user.click(screen.getByRole("button", {name: /register/i}));
+
+        expect(screen.getByText("Password is required.")).toBeInTheDocument();
+        expect(registerUser).not.toHaveBeenCalled();
+        expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it("shows an error for a password under 6 characters, without calling registerUser", async () => {
+        const user = userEvent.setup();
+        renderPage();
+
+        await user.type(screen.getByLabelText("Email"), "test@example.com");
+        await user.type(screen.getByLabelText("Password"), "12345");
+        await user.type(screen.getByLabelText("Confirm Password"), "12345");
+        await user.click(screen.getByRole("button", {name: /register/i}));
+
+        expect(
+            screen.getByText("Password must be at least 6 characters.")
+        ).toBeInTheDocument();
+        expect(registerUser).not.toHaveBeenCalled();
+        expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it("accepts a password of exactly 6 characters", async () => {
+        const user = userEvent.setup();
+        registerUser.mockResolvedValue({uid: "sarah123", email: "test@example.com"});
+        sendVerificationEmail.mockResolvedValue(undefined);
+        renderPage();
+
+        await user.type(screen.getByLabelText("Email"), "test@example.com");
+        await user.type(screen.getByLabelText("Password"), "123456");
+        await user.type(screen.getByLabelText("Confirm Password"), "123456");
+        await user.click(screen.getByRole("button", {name: /register/i}));
+
+        await waitFor(() => {
+            expect(registerUser).toHaveBeenCalledWith("test@example.com", "123456");
+        });
+    });
+
+    it("disables the button and shows 'Creating account...' while registering", async () => {
+        const user = userEvent.setup();
+        let finishRegistering;
+        registerUser.mockReturnValue(new Promise((resolve) => {
+            finishRegistering = resolve;
+        }));
+        sendVerificationEmail.mockResolvedValue(undefined);
+        renderPage();
+
+        await user.type(screen.getByLabelText("Email"), "test@example.com");
+        await user.type(screen.getByLabelText("Password"), "password123");
+        await user.type(screen.getByLabelText("Confirm Password"), "password123");
+        await user.click(screen.getByRole("button", {name: /register/i}));
+
+        const button = screen.getByRole("button", {name: "Creating account..."});
+        expect(button).toBeDisabled();
+
+        finishRegistering({uid: "sarah123", email: "test@example.com"});
+        await waitFor(() => {
+            expect(screen.getByRole("button", {name: "Register"})).toBeEnabled();
+        });
+    });
+
+    // Regression: RegisterPage used to call navigate("/home") before sending the
+    // verification email, which briefly mounted Home (and fired its Recent Bets
+    // request) before landing on /verify-email.
+    it("goes straight to /verify-email and never navigates to /home", async () => {
+        const user = userEvent.setup();
+        registerUser.mockResolvedValue({uid: "sarah123", email: "test@example.com"});
+        sendVerificationEmail.mockResolvedValue(undefined);
+        renderPage();
+
+        await user.type(screen.getByLabelText("Email"), "test@example.com");
+        await user.type(screen.getByLabelText("Password"), "password123");
+        await user.type(screen.getByLabelText("Confirm Password"), "password123");
+        await user.click(screen.getByRole("button", {name: /register/i}));
+
+        await waitFor(() => {
+            expect(mockNavigate).toHaveBeenCalledWith("/verify-email", {
+                state: {verificationEmailFailed: false},
+            });
+        });
+        expect(mockNavigate).not.toHaveBeenCalledWith("/home");
+        expect(mockNavigate).toHaveBeenCalledTimes(1);
+    });
+
 });
