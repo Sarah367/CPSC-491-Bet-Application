@@ -225,11 +225,13 @@ async function joinBet(betId, uid, side) {
             [side === BET_SIDE.A ? "sideACount" : "sideBCount"]: FieldValue.increment(1),
         };
 
+        // FieldValue.increment treats a missing field as 0, so the check does the same.
+        // Otherwise an older Bet missing a count would compute NaN and never activate.
         const shouldActivate = shouldActivateBet({
             status: bet.status,
-            participantCount: bet.participantCount + 1,
-            sideACount: bet.sideACount + (side === BET_SIDE.A ? 1 : 0),
-            sideBCount: bet.sideBCount + (side === BET_SIDE.B ? 1 : 0),
+            participantCount: (bet.participantCount ?? 0) + 1,
+            sideACount: (bet.sideACount ?? 0) + (side === BET_SIDE.A ? 1 : 0),
+            sideBCount: (bet.sideBCount ?? 0) + (side === BET_SIDE.B ? 1 : 0),
         });
 
         if (shouldActivate) {

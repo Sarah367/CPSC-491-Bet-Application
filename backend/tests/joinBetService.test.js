@@ -285,17 +285,31 @@ describe("joinBet auto-activation (SCRUM-55)", () => {
  
     it("stays a Draft for an old Bet that is missing its side counts", async () => {
         setUpReads(betData({ sideACount: undefined, sideBCount: undefined }));
- 
+
         await joinBet("bet-1", "joiner-uid", "B");
- 
+
         expect(statusWritten()).toBeUndefined();
     });
- 
+
+    it("treats a missing count as 0, so an old Bet still activates once both sides have someone", async () => {
+        // Older Bet: an earlier join on B created sideBCount, but sideACount was never written.
+        setUpReads(betData({ participantCount: 2, sideACount: undefined, sideBCount: 1 }));
+
+        await joinBet("bet-1", "joiner-uid", "A");
+
+        expect(statusWritten()).toBe("active");
+    });
+
     it("returns the updated Bet with its new status", async () => {
         setUpReads(betData({ sideACount: 1, sideBCount: 0 }));
- 
+        // Re-read the Bet with whatever status the join wrote (still "draft" if none),
+        // so this test fails if the activation stops being written.
+        mockBetGet.mockImplementation(async () =>
+            snapshot(betData({ status: statusWritten() ?? "draft" }))
+        );
+
         const bet = await joinBet("bet-1", "joiner-uid", "B");
- 
+
         expect(bet.status).toBe("active");
     });
  
