@@ -1,6 +1,6 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { MemoryRouter, Routes, Route, useParams } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { fetchPublicBets } from "../services/betService";
 import BetsListPage from "../pages/BetsListPage";
@@ -142,5 +142,125 @@ describe("BetsListPage", () => {
         await waitFor(() => {
             expect(fetchPublicBets).toHaveBeenCalledTimes(1);
         });
+    });
+});
+
+describe("BetsListPage: rows, links, and deadlines", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        useAuth.mockReturnValue({ loading: false, isAuthenticated: true });
+    });
+
+    // Body rows only (the first row is the header).
+    function bodyRows() {
+        return screen.getAllByRole("row").slice(1);
+    }
+
+    it("renders one row per bet in the order the API returned them", async () => {
+        fetchPublicBets.mockResolvedValue([
+            fakeBet({ id: "bet-3", title: "Third bet" }),
+            fakeBet({ id: "bet-1", title: "First bet" }),
+            fakeBet({ id: "bet-2", title: "Second bet" }),
+        ]);
+
+        renderPage();
+
+        await screen.findByRole("table");
+        const rows = bodyRows();
+        expect(rows).toHaveLength(3);
+        expect(rows.map((row) => within(row).getAllByRole("cell")[0].textContent)).toEqual([
+            "Third bet",
+            "First bet",
+            "Second bet",
+        ]);
+    });
+
+    it("shows the column headings Title, Deadline, Visibility, Status, Creator", async () => {
+        fetchPublicBets.mockResolvedValue([fakeBet()]);
+
+        renderPage();
+
+        await screen.findByRole("table");
+        expect(screen.getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
+            "Title",
+            "Deadline",
+            "Visibility",
+            "Status",
+            "Creator",
+        ]);
+    });
+
+    it("links each title to /bets/:id", async () => {
+        fetchPublicBets.mockResolvedValue([
+            fakeBet({ id: "bet-1", title: "First bet" }),
+            fakeBet({ id: "bet-2", title: "Second bet" }),
+        ]);
+
+        renderPage();
+
+        expect(await screen.findByRole("link", { name: "First bet" })).toHaveAttribute("href", "/bets/bet-1");
+        expect(screen.getByRole("link", { name: "Second bet" })).toHaveAttribute("href", "/bets/bet-2");
+    });
+
+    it("opens the /bets/:betId route when a title is clicked", async () => {
+        fetchPublicBets.mockResolvedValue([fakeBet({ id: "bet-7", title: "Lucky bet" })]);
+
+        function BetRoute() {
+            const { betId } = useParams();
+            return <p>Bet page for {betId}</p>;
+        }
+
+        render(
+            <MemoryRouter initialEntries={["/bets"]}>
+                <Routes>
+                    <Route path="/bets" element={<BetsListPage />} />
+                    <Route path="/bets/:betId" element={<BetRoute />} />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        fireEvent.click(await screen.findByRole("link", { name: "Lucky bet" }));
+
+        expect(await screen.findByText("Bet page for bet-7")).toBeInTheDocument();
+        expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    });
+
+    it("shows the deadline in the local date format", async () => {
+        const deadline = "2026-06-15T12:00:00.000Z";
+        fetchPublicBets.mockResolvedValue([fakeBet({ deadline })]);
+
+        renderPage();
+
+        await screen.findByRole("table");
+        const deadlineCell = within(bodyRows()[0]).getAllByRole("cell")[1];
+        expect(deadlineCell).toHaveTextContent(new Date(deadline).toLocaleString());
+        expect(deadlineCell).not.toHaveTextContent(deadline);
+    });
+
+    it("shows an invalid deadline as-is", async () => {
+        fetchPublicBets.mockResolvedValue([fakeBet({ deadline: "sometime next week" })]);
+
+        renderPage();
+
+        await screen.findByRole("table");
+        const deadlineCell = within(bodyRows()[0]).getAllByRole("cell")[1];
+        expect(deadlineCell).toHaveTextContent("sometime next week");
+        expect(deadlineCell).not.toHaveTextContent("Invalid Date");
+    });
+
+    it("doesn't fetch public bets when the user is signed out", () => {
+        useAuth.mockReturnValue({ loading: false, isAuthenticated: false });
+
+        renderPage();
+
+        expect(fetchPublicBets).not.toHaveBeenCalled();
+    });
+
+    it("doesn't fetch public bets while auth is loading", () => {
+        useAuth.mockReturnValue({ loading: true, isAuthenticated: false });
+
+        renderPage();
+
+        expect(fetchPublicBets).not.toHaveBeenCalled();
     });
 });
