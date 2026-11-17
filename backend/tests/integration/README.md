@@ -42,12 +42,13 @@ remove a route, update this table in the same PR.
 | `POST /api/bets` | auth, verified email | `bets.create.integration.test.js`, `auth-verification.integration.test.js` | 201 monetary, 201 non-monetary, trimming, side counts | 401 missing / malformed / rejected token, 401 checked before 403, 403 unverified, 403 claim absent, 403 ignores spoofed body / header verification, 500 Firestore failure without leaking details | 400 for each missing, blank, or non-string required field, duplicate outcomes, invalid enums, `termsAcknowledged`, past deadline, outcome deadline not after deadline, invalid dates, monetary and non-monetary stake rules, malformed JSON, array body, non-JSON body; server-controlled fields ignored |
 | `GET /api/bets/mine` | auth | `bets.read.integration.test.js` | 200 own Bets incl. private, ISO dates, empty list, newest first | 401 missing / rejected token, 500 Firestore failure without leaking details | spoofed `uid` / `creatorUid` in query, body, and header are ignored |
 | `GET /api/bets/public` | auth | `bets.read.integration.test.js` | 200 public Bets from any creator, only the 7 listing fields, empty list, newest first | 401 missing / rejected token, 500 Firestore failure without leaking details | n/a (no input) |
+| `GET /api/bets/:id` | auth | `bets.details.integration.test.js`, `bets.join.integration.test.js` | 200 Bet details and current viewer participation; after joining, reload shows the participant's side and active status | 401 missing token, 404 missing / private Bet, 500 Bet read failure | n/a (no input) |
+| `POST /api/bets/:id/join` | auth, verified email | `bets.join.integration.test.js` | 200 join response; joining the opposite side activates a Draft and is visible in a subsequent Bet Details request | 401 missing token, 403 unverified, 404 missing / private Bet, 409 creator / already joined / closed, 500 transaction failure | 400 invalid side or unacknowledged / missing terms |
 | unknown routes | none | `api.integration.test.js` | n/a | 404 | n/a |
 
-Not implemented yet, so not tested: Bet Details (`GET /api/bets/:id`, SCRUM-32,
-still on its feature branch), bet editing (SCRUM-36), join / participants,
-lifecycle transitions, outcome resolution / voting, history and stats, payouts,
-and notifications.
+Not implemented yet, so not tested: bet editing (SCRUM-36), lifecycle
+transitions, outcome resolution / voting, history and stats, payouts, and
+notifications.
 
 ## Adding tests for a new endpoint
 
@@ -107,3 +108,8 @@ ticket if the team decides to fix it.
 - **`GET /api/bets/public` lists Bets of every status**, including `draft`.
   The tests lock in the current behavior; if the listing should hide drafts or
   closed Bets, that is a product decision and the test should change with it.
+- **My Bets and Recent Bets currently show only Bets the user created.**
+  `GET /api/bets/mine` filters on `creatorUid`, so a participant who joins
+  someone else's Bet won't see it there. The UI also doesn't currently show a
+  "You Joined this Bet" label. The presentation flow's My Bets and Recent Bets
+  steps need this feature before they can be verified end to end.

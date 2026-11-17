@@ -271,6 +271,28 @@ describe("POST /api/bets/:id/join (join and auto-activation integration)", () =>
             });
         });
 
+        it("shows the active Bet and the joiner's side when Bet Details is loaded afterward", async () => {
+            const joinResponse = await joinAs({ side: "B", termsAcknowledged: true });
+            expect(joinResponse.status).toBe(200);
+
+            const detailsResponse = await request(app)
+                .get(`/api/bets/${BET_ID}`)
+                .set("Authorization", "Bearer valid-token");
+
+            expect(detailsResponse.status).toBe(200);
+            expect(detailsResponse.body.bet).toMatchObject({
+                id: BET_ID,
+                status: "active",
+                participantCount: 2,
+                sideACount: 1,
+                sideBCount: 1,
+            });
+            expect(detailsResponse.body.viewerParticipation).toEqual({
+                side: "B",
+                role: "participant",
+            });
+        });
+
         it("joins the creator's side and keeps the Bet a Draft", async () => {
             const res = await joinAs({ side: "A", termsAcknowledged: true });
 
