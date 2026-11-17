@@ -43,10 +43,10 @@ function RegisterPage() {
         setLoading(true);
         try {
             // Firebase automatically signs in a newly registered user, so by the time this resolves,
-            // the user is already authenticated and we can navigate to the home screen.
+            // the user is already authenticated. Send the verification email, then go
+            // straight to /verify-email (not /home first, which would briefly mount Home).
             const user = await registerUser(email,password);
             let verificationEmailFailed = false;
-            navigate("/home");
             try {
                 await sendVerificationEmail(user);
             } catch {
