@@ -1,0 +1,36 @@
+/* Not Found page (SCRUM-110): one card, matching Bet Details. */
+
+.not-found-page {
+    min-height: 100svh;
+    background: var(--bg);
+}
+
+.not-found-main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.not-found-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+}
+
+.not-found-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 8px;
+}
+
+.not-found-text {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text-muted);
+}
+
+.not-found-link {
+    margin: 16px 0 0;
+}
