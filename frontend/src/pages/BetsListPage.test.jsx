@@ -1,6 +1,6 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { MemoryRouter, Routes, Route, useParams } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { fetchPublicBets } from "../services/betService";
 import BetsListPage from "../pages/BetsListPage";
@@ -142,5 +142,80 @@ describe("BetsListPage", () => {
         await waitFor(() => {
             expect(fetchPublicBets).toHaveBeenCalledTimes(1);
         });
+    });
+});
+
+describe("BetsListPage: bet links and auth", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        useAuth.mockReturnValue({ loading: false, isAuthenticated: true });
+    });
+
+    it("shows every bet, in the order the API returned them", async () => {
+        fetchPublicBets.mockResolvedValue([
+            fakeBet({ id: "bet-3", title: "Third bet" }),
+            fakeBet({ id: "bet-1", title: "First bet" }),
+            fakeBet({ id: "bet-2", title: "Second bet" }),
+        ]);
+
+        renderPage();
+
+        await screen.findByRole("link", { name: "Third bet" });
+        expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+            "Third bet",
+            "First bet",
+            "Second bet",
+        ]);
+    });
+
+    it("links each title to /bets/:id", async () => {
+        fetchPublicBets.mockResolvedValue([
+            fakeBet({ id: "bet-1", title: "First bet" }),
+            fakeBet({ id: "bet-2", title: "Second bet" }),
+        ]);
+
+        renderPage();
+
+        expect(await screen.findByRole("link", { name: "First bet" })).toHaveAttribute("href", "/bets/bet-1");
+        expect(screen.getByRole("link", { name: "Second bet" })).toHaveAttribute("href", "/bets/bet-2");
+    });
+
+    it("opens the /bets/:betId route when a title is clicked", async () => {
+        fetchPublicBets.mockResolvedValue([fakeBet({ id: "bet-7", title: "Lucky bet" })]);
+
+        function BetRoute() {
+            const { betId } = useParams();
+            return <p>Bet page for {betId}</p>;
+        }
+
+        render(
+            <MemoryRouter initialEntries={["/bets"]}>
+                <Routes>
+                    <Route path="/bets" element={<BetsListPage />} />
+                    <Route path="/bets/:betId" element={<BetRoute />} />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        fireEvent.click(await screen.findByRole("link", { name: "Lucky bet" }));
+
+        expect(await screen.findByText("Bet page for bet-7")).toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Lucky bet" })).not.toBeInTheDocument();
+    });
+
+    it("doesn't fetch public bets when the user is signed out", () => {
+        useAuth.mockReturnValue({ loading: false, isAuthenticated: false });
+
+        renderPage();
+
+        expect(fetchPublicBets).not.toHaveBeenCalled();
+    });
+
+    it("doesn't fetch public bets while auth is loading", () => {
+        useAuth.mockReturnValue({ loading: true, isAuthenticated: false });
+
+        renderPage();
+
+        expect(fetchPublicBets).not.toHaveBeenCalled();
     });
 });

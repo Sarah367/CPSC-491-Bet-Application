@@ -287,3 +287,135 @@ describe("BetDetailsPage: outcomes and joining (SCRUM-88)", () => {
         expect(screen.getByRole("button", {name: "Join Bet"})).toBeDisabled();
     });
 });
+
+describe("BetDetailsPage: field fallbacks and navigation", () => {
+    // The <dd> value next to a <dt> label, so each check looks at the right row.
+    function detailValue(label) {
+        return screen.getByText(label, {selector: "dt"}).nextElementSibling;
+    }
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        useAuth.mockReturnValue(authenticatedUser);
+    });
+
+    it("shows 'No description' when the description is empty", async () => {
+        apiGet.mockResolvedValue({bet: fakeBet({description: ""})});
+
+        renderBetDetailsPage();
+
+        await screen.findByText("Will the Dodgers win on Friday?");
+        expect(detailValue("Description")).toHaveTextContent("No description");
+    });
+
+    it("shows a readable date for a valid deadline", async () => {
+        const deadline = "2026-06-15T12:00:00.000Z";
+        apiGet.mockResolvedValue({bet: fakeBet({deadline})});
+
+        renderBetDetailsPage();
+
+        await screen.findByText("Will the Dodgers win on Friday?");
+        const expected = new Date(deadline).toLocaleString(undefined, {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+        });
+        expect(detailValue("Deadline")).toHaveTextContent(expected);
+        expect(detailValue("Deadline")).not.toHaveTextContent(deadline);
+        expect(detailValue("Deadline")).not.toHaveTextContent("No deadline");
+    });
+
+    it.each([
+        ["missing", undefined],
+        ["empty", ""],
+        ["invalid", "not-a-date"],
+    ])("shows 'No deadline' when the deadline is %s", async (_label, deadline) => {
+        apiGet.mockResolvedValue({bet: fakeBet({deadline})});
+
+        renderBetDetailsPage();
+
+        await screen.findByText("Will the Dodgers win on Friday?");
+        expect(detailValue("Deadline")).toHaveTextContent("No deadline");
+    });
+
+    it.each([
+        ["external", "External data"],
+        ["personal", "Personal confirmation"],
+        ["community-vote", "community-vote"],
+        [undefined, "Unknown"],
+    ])("shows the resolution method %s as '%s'", async (resolutionMethod, expected) => {
+        apiGet.mockResolvedValue({bet: fakeBet({resolutionMethod})});
+
+        renderBetDetailsPage();
+
+        await screen.findByText("Will the Dodgers win on Friday?");
+        expect(detailValue("Resolution Method")).toHaveTextContent(expected);
+    });
+
+    it("shows 0 participants when participantCount is missing", async () => {
+        apiGet.mockResolvedValue({bet: fakeBet({participantCount: undefined})});
+
+        renderBetDetailsPage();
+
+        await screen.findByText("Will the Dodgers win on Friday?");
+        expect(detailValue("Participants")).toHaveTextContent("0");
+    });
+
+    it("shows 'Side A' and 'Side B' when the outcome text is missing", async () => {
+        apiGet.mockResolvedValue({bet: fakeBet({outcomeA: undefined, outcomeB: ""})});
+
+        renderBetDetailsPage();
+
+        await screen.findByText("Will the Dodgers win on Friday?");
+        expect(detailValue("Outcome A")).toHaveTextContent("Side A");
+        expect(detailValue("Outcome B")).toHaveTextContent("Side B");
+    });
+
+    it("has a Back to Home link to /home", async () => {
+        apiGet.mockResolvedValue({bet: fakeBet()});
+
+        renderBetDetailsPage();
+
+        await screen.findByText("Will the Dodgers win on Friday?");
+        expect(screen.getByRole("link", {name: "Back to Home"})).toHaveAttribute("href", "/home");
+    });
+
+    it("has a Back to Home link to /home on the not-found page", async () => {
+        apiGet.mockRejectedValue(new ApiError(404, {error: "not_found"}));
+
+        renderBetDetailsPage();
+
+        await screen.findByText("This bet doesn't exist.");
+        expect(screen.getByRole("link", {name: "Back to Home"})).toHaveAttribute("href", "/home");
+    });
+
+    it("clears the not-found message when moving from a missing Bet to a real one", async () => {
+        apiGet.mockImplementation((path) => (
+            path === "/bets/bet-2"
+                ? Promise.resolve({bet: fakeBet({id: "bet-2", title: "Will it snow on Saturday?"})})
+                : Promise.reject(new ApiError(404, {error: "not_found"}))
+        ));
+
+        render(
+            <MemoryRouter initialEntries={["/bets/missing-bet"]}>
+                <Routes>
+                    <Route
+                        path="/bets/:betId"
+                        element={<><BetDetailsPage/><Link to="/bets/bet-2">Go to Bet 2</Link></>}
+                    />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        expect(await screen.findByText("This bet doesn't exist.")).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("link", {name: "Go to Bet 2"}));
+
+        expect(await screen.findByRole("heading", {name: "Will it snow on Saturday?"})).toBeInTheDocument();
+        expect(screen.queryByText("This bet doesn't exist.")).not.toBeInTheDocument();
+        expect(apiGet).toHaveBeenCalledWith("/bets/missing-bet");
+        expect(apiGet).toHaveBeenLastCalledWith("/bets/bet-2");
+    });
+});
