@@ -1,5 +1,6 @@
 import {auth} from "./firebase";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, sendEmailVerification } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } from "firebase/auth";
+import {apiRequest} from "./apiClient";
 
 export {auth}
 
@@ -47,12 +48,20 @@ export async function logoutUser() {
     }
 }
 
+// Saves the display name through our backend (SCRUM-87), which updates Firebase Auth
+// and the user's Firestore profile together, so other users see the new name on the
+// user's Bets. Returns the saved profile, for example { displayName: "Jordan Rivera" }.
 export async function updateDisplayName(displayName) {
     const user = auth.currentUser;
     if (!user) {
         throw new Error("A signed-in user is required to update the display name.");
     }
 
-    await updateProfile(user, { displayName });
-    return user;
+    const data = await apiRequest("/users/me", {method: "PUT", body: {displayName}});
+
+    // The backend changed the name in Firebase Auth, but this browser still has the old
+    // name cached. Reloading the user picks up the new one, so it stays after a refresh.
+    await user.reload();
+
+    return data.profile;
 }
