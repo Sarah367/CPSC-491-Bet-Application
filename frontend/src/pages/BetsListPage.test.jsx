@@ -92,6 +92,48 @@ describe("BetsListPage", () => {
         );
     });
 
+    it("doesn't also show the empty message or a table when the fetch fails", async () => {
+        fetchPublicBets.mockRejectedValue(new Error("network error"));
+
+        renderPage();
+
+        await screen.findByRole("alert");
+        expect(screen.queryByText("No public bets yet.")).not.toBeInTheDocument();
+        expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    });
+
+    it("doesn't show an error with the empty message when there are no bets", async () => {
+        fetchPublicBets.mockResolvedValue([]);
+
+        renderPage();
+
+        await screen.findByText("No public bets yet.");
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("shows only the loading message while bets are loading", async () => {
+        fetchPublicBets.mockReturnValue(new Promise(() => {}));
+
+        renderPage();
+
+        expect(await screen.findByText("Loading bets...")).toBeInTheDocument();
+        expect(screen.queryByText("No public bets yet.")).not.toBeInTheDocument();
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+        expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    });
+
+    it("shows the list without an error when the fetch succeeds", async () => {
+        fetchPublicBets.mockResolvedValue([fakeBet()]);
+
+        renderPage();
+
+        expect(await screen.findByRole("table")).toBeInTheDocument();
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+        expect(screen.queryByText("No public bets yet.")).not.toBeInTheDocument();
+    });
+
+
+
     it("fetches public bets only once auth resolves", async () => {
         fetchPublicBets.mockResolvedValue([fakeBet()]);
 
