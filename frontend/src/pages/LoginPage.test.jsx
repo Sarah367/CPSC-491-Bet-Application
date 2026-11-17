@@ -103,7 +103,51 @@ describe("LoginPage validation", () => {
         expect(mockNavigate).not.toHaveBeenCalled();
     });
 
+    it("shows the rate-limit message when Firebase returns auth/too-many-requests", async () => {
+        const user = userEvent.setup();
+        loginUser.mockRejectedValue({code: "auth/too-many-requests"});
+        renderPage();
 
+        await user.type(screen.getByLabelText("Email"), "test@example.com");
+        await user.type(screen.getByLabelText("Password"), "wrongpassword");
+        await user.click(screen.getByRole("button", {name: /log in/i}));
 
+        expect(
+            await screen.findByText("Too many failed attempts. Please try again later.")
+        ).toBeInTheDocument();
+        expect(mockNavigate).not.toHaveBeenCalled();
+    });
 
+    it("disables the button and shows 'Logging in...' while signing in", async () => {
+        const user = userEvent.setup();
+        let finishLogin;
+        loginUser.mockReturnValue(new Promise((resolve) => {
+            finishLogin = resolve;
+        }));
+        renderPage();
+
+        await user.type(screen.getByLabelText("Email"), "test@example.com");
+        await user.type(screen.getByLabelText("Password"), "password123");
+        await user.click(screen.getByRole("button", {name: /log in/i}));
+
+        expect(screen.getByRole("button", {name: "Logging in..."})).toBeDisabled();
+
+        finishLogin({uid: "abc123", email: "test@example.com"});
+        await waitFor(() => {
+            expect(mockNavigate).toHaveBeenCalledWith("/home");
+        });
+    });
+
+    it("re-enables the button after a failed login so the user can retry", async () => {
+        const user = userEvent.setup();
+        loginUser.mockRejectedValue({code: "auth/invalid-credential"});
+        renderPage();
+
+        await user.type(screen.getByLabelText("Email"), "test@example.com");
+        await user.type(screen.getByLabelText("Password"), "wrongpassword");
+        await user.click(screen.getByRole("button", {name: /log in/i}));
+
+        await screen.findByText("Invalid email or password.");
+        expect(screen.getByRole("button", {name: "Log In"})).toBeEnabled();
+    });
 });
